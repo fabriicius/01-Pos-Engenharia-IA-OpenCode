@@ -1,159 +1,74 @@
-# Turborepo starter
+# Foundation monorepo
 
-This Turborepo starter is maintained by the Turborepo core team.
+A Turborepo/npm-workspaces foundation for the expert platform. It contains a NestJS hello-world API, a React + Vite hello-world client, local Supabase Postgres, a Grafana LGTM stack, and reproducible quality commands.
 
-## Using this example
+The architectural decisions for this foundation are recorded in [`.adrs/0001-foundation.md`](.adrs/0001-foundation.md). Product direction lives in `.docs/BUSINESS.md`; engineering context lives in `.docs/`.
 
-Run the following command:
+## Workspaces
 
-```sh
-npx create-turbo@latest
-```
+| Path                         | Package                   | Role                                 | Port |
+| ---------------------------- | ------------------------- | ------------------------------------ | ---- |
+| `apps/api`                   | `api`                     | NestJS API, `GET /` hello-world JSON | 3000 |
+| `apps/app`                   | `app`                     | React + Vite hello-world page        | 5173 |
+| `packages/ui`                | `@repo/ui`                | Shared React components              | —    |
+| `packages/eslint-config`     | `@repo/eslint-config`     | Shared ESLint flat configs           | —    |
+| `packages/typescript-config` | `@repo/typescript-config` | Shared TSConfig presets              | —    |
 
-## What's inside?
+The starter `apps/web` and `apps/docs` apps were removed by the foundation spec. Next.js-only dependencies and the `./next-js` ESLint export remain installed but unused (D-13).
 
-This Turborepo includes the following packages/apps:
+## Quickstart
 
-### Apps and Packages
-
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `@next/eslint-plugin-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+Requires Node `>=22` (verified on `v22.22.1`), npm `9.2.0`, and Docker with Compose v5 for local infrastructure.
 
 ```sh
-cd my-turborepo
-turbo build
+npm install                 # also installs Lefthook hooks via prepare
+cp .env.example .env        # local-only defaults; never reuse in production
+
+npm run dev                 # API on :3000, client on :5173
+curl http://localhost:3000/ # {"message":"Hello World"}
+# open http://localhost:5173/ → <h1>Hello World</h1>, title "Hello World"
 ```
 
-Without global `turbo`, use your package manager:
+## Quality commands
 
 ```sh
-cd my-turborepo
-npx turbo build
-npm exec turbo build
-npm exec turbo build
+npm run lint                # ESLint via Turborepo
+npm run check-types         # TypeScript via Turborepo
+npm run types:check         # alias of check-types
+npm run test                # Vitest + Supertest smoke tests
+npm run build               # builds all workspaces; emits apps/app/dist/**
+npm run code:fix            # eslint --fix + Prettier write (mutating, uncached)
+npm run format              # Prettier write for ts/tsx/md
+npx prettier --check "**/*.{ts,tsx,md}"  # non-mutating format check
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+See [`.docs/QA.md`](.docs/QA.md) for the full list, recommended order and probes.
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+## Local infrastructure
 
 ```sh
-turbo build --filter=docs
+npm run infra:up            # supabase start && docker compose up -d
+npm run db:migrate          # Drizzle migration (idempotent)
+npm run infra:down          # supabase stop && docker compose down; volumes preserved
 ```
 
-Without global `turbo`:
+| Service           | Port  | Notes                                                       |
+| ----------------- | ----- | ----------------------------------------------------------- |
+| Supabase Studio   | 54323 | Local dashboard                                             |
+| Supabase Postgres | 54322 | `DATABASE_URL` in `.env.example`                            |
+| Grafana           | 3002  | `admin`/`admin`; Loki, Tempo, Mimir datasources provisioned |
+| Loki              | 3100  | Logs                                                        |
+| Tempo             | 3200  | Traces                                                      |
+| Mimir             | 9009  | Metrics                                                     |
 
-```sh
-npx turbo build --filter=docs
-npm exec turbo build --filter=docs
-npm exec turbo build --filter=docs
-```
+Configuration lives in `supabase/config.toml`, `docker-compose.yml`, `monitoring/`, `grafana/provisioning/`, `drizzle.config.ts` and `drizzle/`. `.env.example` carries development-only defaults; do not use them in production.
 
-### Develop
+## Commits
 
-To develop all apps and packages, run the following command:
+Lefthook runs `lint-staged` on `pre-commit` and `commitlint` on `commit-msg`. Use Conventional Commits, for example `feat: add foundation`.
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+From OpenCode, run `/commit-and-push` at the end of every spec execution. It analyzes all pending changes (including untracked files), derives a Conventional Commit message unless you pass one, stages everything with `git add -A`, commits with `Co-authored-by: OpenCode Agent <opencode@opencode.ai>`, and pushes the current branch. You can override the message: `/commit-and-push 'feat(api): add hello-world endpoint'`. Hooks and Commitlint are not bypassed.
 
-```sh
-cd my-turborepo
-turbo dev
-```
+## Turborepo utilities
 
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo dev
-npm exec turbo dev
-npm exec turbo dev
-```
-
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo dev --filter=web
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo dev --filter=web
-npm exec turbo dev --filter=web
-npm exec turbo dev --filter=web
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo login
-npm exec turbo login
-npm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-npm exec turbo link
-npm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+Tasks are configured in `turbo.json`. Run a task for one workspace with npm filters, for example `npm run build -w app` or `npm run test -w api`. Remote caching is not configured; caching is local by default. Useful references: [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks), [Caching](https://turborepo.dev/docs/crafting-your-repository/caching), [Configuration](https://turborepo.dev/docs/reference/configuration).

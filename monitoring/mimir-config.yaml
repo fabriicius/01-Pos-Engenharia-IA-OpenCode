@@ -1,0 +1,38 @@
+target: all
+
+server:
+  http_listen_port: 9009
+
+distributor:
+  ring:
+    kvstore:
+      store: inmemory
+
+ingester:
+  ring:
+    instance_addr: 127.0.0.1
+    kvstore:
+      store: inmemory
+    replication_factor: 1
+
+ruler_storage:
+  backend: local
+  local:
+    directory: /var/mimir/rules
+
+blocks_storage:
+  backend: filesystem
+  filesystem:
+    dir: /var/mimir/blocks
+  tsdb:
+    dir: /var/mimir/tsdb
+  bucket_store:
+    sync_dir: /var/mimir/tsdb-sync
+
+compactor:
+  data_dir: /var/mimir/compactor
+
+store_gateway:
+  sharding_ring:
+    kvstore:
+      store: inmemory
