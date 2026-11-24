@@ -14,13 +14,13 @@
 
 ### Workspaces
 
-| Path                         | Package                   | Role                               | Stack                                  | Status    |
-| ---------------------------- | ------------------------- | ---------------------------------- | -------------------------------------- | --------- |
-| `apps/api`                   | `api`                     | Hello-world HTTP API (port 3000)   | NestJS, TypeScript, Vitest + Supertest | [current] |
-| `apps/app`                   | `app`                     | Hello-world web client (port 5173) | React 19, Vite 8, TypeScript, Vitest   | [current] |
-| `packages/ui`                | `@repo/ui`                | Shared React component library     | React 19, TypeScript                   | [current] |
-| `packages/eslint-config`     | `@repo/eslint-config`     | Shared ESLint config               | ESLint 10                              | [current] |
-| `packages/typescript-config` | `@repo/typescript-config` | Shared TSConfig presets            | TypeScript                             | [current] |
+| Path                         | Package                   | Role                                                      | Stack                                                                                         | Status    |
+| ---------------------------- | ------------------------- | --------------------------------------------------------- | --------------------------------------------------------------------------------------------- | --------- |
+| `apps/api`                   | `api`                     | HTTP API (port 3000): `GET /` and `/api/v1/auth/*`        | NestJS, TypeScript, Drizzle/Postgres, class-validator, bcrypt, Nodemailer, Vitest + Supertest | [current] |
+| `apps/app`                   | `app`                     | Web client (port 5173): `/`, `/auth/sign-up`, `/app/home` | React 19, React Router 7, Vite 8, TypeScript, Vitest                                          | [current] |
+| `packages/ui`                | `@repo/ui`                | Shared React component library                            | React 19, TypeScript                                                                          | [current] |
+| `packages/eslint-config`     | `@repo/eslint-config`     | Shared ESLint config                                      | ESLint 10                                                                                     | [current] |
+| `packages/typescript-config` | `@repo/typescript-config` | Shared TSConfig presets                                   | TypeScript                                                                                    | [current] |
 
 The starter Next.js apps `apps/web` and `apps/docs` were removed by the foundation spec. Next.js-only dependencies (`next`, `@next/eslint-plugin-next`) and the `./next-js` ESLint export remain installed but are used by no workspace (D-13 in `.adrs/0001-foundation.md`).
 
@@ -47,45 +47,60 @@ npm run db:migrate   # drizzle-kit migrate
 
 ### Current tooling
 
-| Tool               | Purpose                                    | Status    |
-| ------------------ | ------------------------------------------ | --------- |
-| Turborepo          | Task orchestration/caching                 | [current] |
-| TypeScript         | Static typing                              | [current] |
-| ESLint + Prettier  | Linting and formatting (`code:fix`)        | [current] |
-| Vitest + Supertest | Smoke tests (HTTP contract, client render) | [current] |
-| Supabase CLI       | Pinned devDependency; local Postgres       | [current] |
-| Drizzle Kit/ORM    | Migration application and schema tooling   | [current] |
-| Docker Compose     | Loki, Grafana, Tempo, Mimir (LGTM)         | [current] |
-| Lefthook           | Local `pre-commit` / `commit-msg` hooks    | [current] |
-| lint-staged        | Format/lint staged files on commit         | [current] |
-| Commitlint         | Conventional Commits enforcement           | [current] |
+| Tool               | Purpose                                              | Status    |
+| ------------------ | ---------------------------------------------------- | --------- |
+| Turborepo          | Task orchestration/caching                           | [current] |
+| TypeScript         | Static typing                                        | [current] |
+| ESLint + Prettier  | Linting and formatting (`code:fix`)                  | [current] |
+| Vitest + Supertest | HTTP contract, use-case unit and client render tests | [current] |
+| React Router       | `/`, `/auth/*` and `/app/*` client routes            | [current] |
+| Drizzle ORM        | Typed Postgres client and repositories               | [current] |
+| class-validator    | Global DTO validation for auth endpoints             | [current] |
+| bcrypt             | Password hashing (cost 12)                           | [current] |
+| Nodemailer         | Mailtrap SMTP adapter                                | [current] |
+| Supabase CLI       | Pinned devDependency; local Postgres                 | [current] |
+| Drizzle Kit/ORM    | Migration application and schema tooling             | [current] |
+| Docker Compose     | Loki, Grafana, Tempo, Mimir (LGTM)                   | [current] |
+| Lefthook           | Local `pre-commit` / `commit-msg` hooks              | [current] |
+| lint-staged        | Format/lint staged files on commit                   | [current] |
+| Commitlint         | Conventional Commits enforcement                     | [current] |
 
 ### Local services and ports
 
-| Service             | Port  | Notes                                                |
-| ------------------- | ----- | ---------------------------------------------------- |
-| API (`apps/api`)    | 3000  | `GET /` → `{"message":"Hello World"}`                |
-| Client (`apps/app`) | 5173  | `<h1>Hello World</h1>`, title "Hello World"          |
-| Grafana             | 3002  | Loki (default), Tempo, Mimir datasources provisioned |
-| Loki                | 3100  | Logs                                                 |
-| Tempo               | 3200  | Traces                                               |
-| Supabase Studio     | 54323 | Local dashboard                                      |
-| Supabase Postgres   | 54322 | `DATABASE_URL` target for `db:migrate`               |
-| Mimir               | 9009  | Metrics                                              |
+| Service             | Port  | Notes                                                                              |
+| ------------------- | ----- | ---------------------------------------------------------------------------------- |
+| API (`apps/api`)    | 3000  | `GET /` → `{"message":"Hello World"}`; `POST /api/v1/auth/sign-up`                 |
+| Client (`apps/app`) | 5173  | `/` → `<h1>Hello World</h1>`; `/auth/sign-up`; `/app/home` (unguarded placeholder) |
+| Grafana             | 3002  | Loki (default), Tempo, Mimir datasources provisioned                               |
+| Loki                | 3100  | Logs                                                                               |
+| Tempo               | 3200  | Traces                                                                             |
+| Supabase Studio     | 54323 | Local dashboard                                                                    |
+| Supabase Postgres   | 54322 | `DATABASE_URL` target for `db:migrate`                                             |
+| Mimir               | 9009  | Metrics                                                                            |
 
 Local defaults live in `.env.example`; copy it to `.env` before starting the stack. These credentials are development-only.
+
+### Authentication slice (current)
+
+- `apps/api/src/auth/interface/` — `AuthController`, `SignUpRequestDto` and the password-match constraint. All routes are under `/api/v1` via `configureApp()` in `apps/api/src/setup.ts`.
+- `apps/api/src/auth/application/` — `SignUpUseCase` owns token generation, the transaction boundary, email dispatch and compensation when dispatch fails.
+- `apps/api/src/auth/domain/` — persistence ports (`UnitOfWork`, repositories, `PasswordHasher`), the `EmailService` port, token helpers and domain errors.
+- `apps/api/src/auth/infrastructure/` — Drizzle client/repositories, bcrypt hasher and the Mailtrap/Resend/console email adapters selected by `createEmailService()`.
+- Tables: `users` (UUID id, unique `lower(email)`, `pending|active` status) and `account_confirmation_tokens` (hashed token, 24-hour expiry, nullable `used_at`), created by `drizzle/0001_sign_up.sql`. The table definitions live in `apps/api/src/auth/infrastructure/schema.ts` and are re-exported by `drizzle/schema.ts` for `drizzle-kit`.
+- Client: `BrowserRouter` in `apps/app/src/main.tsx`; `SignUpPage` posts to `${VITE_API_URL}/api/v1/auth/sign-up` and stays on the page with a success message.
+- Email provider details and the en-US/versioning conventions are recorded in ADR 0002.
 
 ## Target architecture
 
 These items remain product/engineering direction, not current implementation. Do not assume they exist unless verified in code/config.
 
-| Area             | Target                                                                  | Notes                                                                |
-| ---------------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| Backend layering | `interface` / `application` / `domain` / `infrastructure` in `apps/api` | Added with the first real feature; the skeleton has no domain layers |
-| Testing          | Playwright E2E in addition to Vitest/Supertest                          | Smoke coverage exists; browser E2E is deferred                       |
-| Observability    | Application log/trace/metric instrumentation                            | LGTM containers and datasources exist; no app instrumentation yet    |
-| Deployment       | Vercel                                                                  | App/API deployment target                                            |
-| Design system    | Tokens/shadcn-ui                                                        | Deliberately not introduced in the foundation                        |
+| Area             | Target                                                                  | Notes                                                                          |
+| ---------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Backend layering | `interface` / `application` / `domain` / `infrastructure` in `apps/api` | Implemented for the auth slice; other capabilities can follow the same pattern |
+| Testing          | Playwright E2E in addition to Vitest/Supertest                          | Smoke coverage exists; browser E2E is deferred                                 |
+| Observability    | Application log/trace/metric instrumentation                            | LGTM containers and datasources exist; no app instrumentation yet              |
+| Deployment       | Vercel                                                                  | App/API deployment target                                                      |
+| Design system    | Tokens/shadcn-ui                                                        | Deliberately not introduced in the foundation                                  |
 
 ESLint + Prettier are the chosen lint/format stack (ADR 0001); OXLint/OXFmt were explicitly rejected and are not targets.
 

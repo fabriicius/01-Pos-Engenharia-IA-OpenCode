@@ -2,6 +2,7 @@ import { NestFactory } from "@nestjs/core";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AppModule } from "../src/app.module";
+import { configureApp } from "../src/setup";
 
 const HELLO_WORLD = { message: "Hello World" };
 
@@ -10,6 +11,7 @@ describe("AppController HTTP contract", () => {
 
   beforeAll(async () => {
     app = await NestFactory.create(AppModule, { logger: false });
+    configureApp(app);
     await app.init();
   });
 
@@ -24,9 +26,9 @@ describe("AppController HTTP contract", () => {
     expect(response.body).toEqual(HELLO_WORLD);
   });
 
-  it("GET /does-not-exist returns JSON 404 and the app stays up", async () => {
+  it("GET /api/v1/does-not-exist returns JSON 404 and the app stays up", async () => {
     await request(app.getHttpServer())
-      .get("/does-not-exist")
+      .get("/api/v1/does-not-exist")
       .expect(404)
       .expect("Content-Type", /application\/json/);
 

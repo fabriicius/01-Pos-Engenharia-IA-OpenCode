@@ -24,6 +24,9 @@ export default [
   {
     files,
     rules: {
+      // TypeScript's checker resolves identifiers, types and globals; the
+      // Babel parser cannot, so ESLint's JS-only rule reports false positives.
+      "no-undef": "off",
       "no-unused-vars": "off",
     },
   },

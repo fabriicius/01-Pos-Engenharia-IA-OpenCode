@@ -43,8 +43,10 @@ Probes after `infra:up`:
 | Check                                                       | Expected                                              |
 | ----------------------------------------------------------- | ----------------------------------------------------- |
 | `curl http://localhost:3000/`                               | `200 application/json` `{"message":"Hello World"}`    |
-| `curl http://localhost:3000/does-not-exist`                 | JSON `404`, API still up                              |
+| `curl http://localhost:3000/api/v1/does-not-exist`          | JSON `404`, API still up                              |
 | `curl http://localhost:5173/`                               | Page with `<h1>Hello World</h1>`, title "Hello World" |
+| `curl http://localhost:5173/auth/sign-up`                   | Public sign-up form                                   |
+| `curl http://localhost:5173/app/home`                       | Unguarded placeholder page                            |
 | `curl http://localhost:3100/ready`                          | Loki ready                                            |
 | `curl http://localhost:3200/ready`                          | Tempo `ready`                                         |
 | `curl http://localhost:9009/ready`                          | Mimir `ready`                                         |
@@ -53,6 +55,19 @@ Probes after `infra:up`:
 | `npx supabase status`                                       | Studio 54323, Postgres 54322                          |
 | `docker compose ps`                                         | Four LGTM containers running                          |
 | `docker volume ls` after `infra:down`                       | LGTM and Supabase volumes still present               |
+
+### Sign-up checks
+
+After `npm run infra:up` and `npm run db:migrate` (with `npm run dev` running):
+
+1. Open `/auth/sign-up` — five labelled fields in keyboard order, an 8-character hint, visible focus and no dark mode.
+2. Submit mismatched passwords — an inline `role="alert"` message appears and no request is sent.
+3. Submit valid values — the button reads "Creating account…" while in flight, then the page stays on `/auth/sign-up` with "Check your email to confirm your account."
+4. With no credentials for the selected provider, stdout contains the fallback warning and the full "Confirm your account" message with an `{APP_URL}/auth/confirm-account?token={TOKEN}` link.
+5. Inspect `users` and `account_confirmation_tokens` — lowercased email, bcrypt hash, status `pending`, token hash only, `used_at` null and `expires_at` about 24 hours after creation.
+6. Repeat the same email in a different letter case — HTTP 409, no second account and no second email. Following the confirmation link is deferred to `003-confirm-account`.
+7. Stop the email provider with credentials still configured — HTTP 502 and no leftover `pending` account.
+8. Open `/` and `/app/home` — both still render the hello-world heading; `/` keeps `GET /` → `{"message":"Hello World"}`.
 
 ## Hook checks
 
