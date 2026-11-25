@@ -81,6 +81,35 @@ export class DrizzleAccountRepository extends AccountRepository {
       .set({ sessionVersion: newVersion })
       .where(and(eq(users.id, id), eq(users.sessionVersion, expectedVersion)));
   }
+
+  async activateIfPending(id: string): Promise<number | null> {
+    const rows = await this.transaction
+      .update(users)
+      .set({
+        status: "active",
+        sessionVersion: sql`${users.sessionVersion} + 1`,
+      })
+      .where(and(eq(users.id, id), eq(users.status, "pending")))
+      .returning({ sessionVersion: users.sessionVersion });
+
+    return rows[0]?.sessionVersion ?? null;
+  }
+
+  async restorePendingSession(
+    id: string,
+    issuedVersion: number,
+  ): Promise<void> {
+    await this.transaction
+      .update(users)
+      .set({ status: "pending", sessionVersion: issuedVersion - 1 })
+      .where(
+        and(
+          eq(users.id, id),
+          eq(users.status, "active"),
+          eq(users.sessionVersion, issuedVersion),
+        ),
+      );
+  }
 }
 
 type UserRow = typeof users.$inferSelect;

@@ -33,6 +33,13 @@ export class InvalidAccessTokenError extends Error {
   }
 }
 
+export class InvalidConfirmationTokenError extends Error {
+  constructor() {
+    super("This confirmation link is invalid or has expired.");
+    this.name = "InvalidConfirmationTokenError";
+  }
+}
+
 export class SessionNotificationError extends Error {
   constructor() {
     super("Session notification email could not be delivered.");

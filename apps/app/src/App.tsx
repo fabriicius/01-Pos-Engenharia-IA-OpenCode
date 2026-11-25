@@ -1,4 +1,5 @@
 import { Route, Routes } from "react-router-dom";
+import { ConfirmAccountPage } from "./auth/confirm-account/ConfirmAccountPage";
 import { SignInPage } from "./auth/sign-in/SignInPage";
 import { SignUpPage } from "./auth/sign-up/SignUpPage";
 
@@ -25,6 +26,7 @@ export function App() {
       <Route path="/" element={<HelloWorldPage />} />
       <Route path="/auth/sign-up" element={<SignUpPage />} />
       <Route path="/auth/sign-in" element={<SignInPage />} />
+      <Route path="/auth/confirm-account" element={<ConfirmAccountPage />} />
       <Route path="/app/home" element={<AppHomePage />} />
     </Routes>
   );

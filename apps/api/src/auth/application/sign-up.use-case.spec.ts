@@ -10,6 +10,7 @@ import {
   PasswordHasher,
   PendingAccountInput,
   PersistencePorts,
+  TokenClaim,
   UnitOfWork,
 } from "../domain/ports";
 import { SignUpRequestDto } from "../interface/dto/sign-up-request.dto";
@@ -55,6 +56,17 @@ class FakeAccountRepository implements AccountRepository {
   ): Promise<void> {
     return undefined;
   }
+
+  async activateIfPending(_id: string): Promise<number | null> {
+    return 1;
+  }
+
+  async restorePendingSession(
+    _id: string,
+    _issuedVersion: number,
+  ): Promise<void> {
+    return undefined;
+  }
 }
 
 class FakeConfirmationTokenRepository implements ConfirmationTokenRepository {
@@ -66,6 +78,17 @@ class FakeConfirmationTokenRepository implements ConfirmationTokenRepository {
 
   async removeByUserId(userId: string): Promise<void> {
     this.rows = this.rows.filter((row) => row.userId !== userId);
+  }
+
+  async claimByHash(
+    _tokenHash: string,
+    _now: Date,
+  ): Promise<TokenClaim | null> {
+    return null;
+  }
+
+  async releaseClaim(_tokenHash: string, _claimedUsedAt: Date): Promise<void> {
+    return undefined;
   }
 }
 

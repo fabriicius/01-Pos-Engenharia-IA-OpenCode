@@ -27,6 +27,11 @@ export interface AccountRecord {
   sessionVersion: number;
 }
 
+export interface TokenClaim {
+  userId: string;
+  usedAt: Date;
+}
+
 export interface PersistencePorts {
   accounts: AccountRepository;
   confirmationTokens: ConfirmationTokenRepository;
@@ -43,11 +48,21 @@ export abstract class AccountRepository {
     expectedVersion: number,
     newVersion: number,
   ): Promise<void>;
+  abstract activateIfPending(id: string): Promise<number | null>;
+  abstract restorePendingSession(
+    id: string,
+    issuedVersion: number,
+  ): Promise<void>;
 }
 
 export abstract class ConfirmationTokenRepository {
   abstract create(input: ConfirmationTokenInput): Promise<void>;
   abstract removeByUserId(userId: string): Promise<void>;
+  abstract claimByHash(
+    tokenHash: string,
+    now: Date,
+  ): Promise<TokenClaim | null>;
+  abstract releaseClaim(tokenHash: string, claimedUsedAt: Date): Promise<void>;
 }
 
 export abstract class PasswordHasher {

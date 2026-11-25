@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { ConfirmAccountUseCase } from "./application/confirm-account.use-case";
 import { GetCurrentSessionUseCase } from "./application/get-current-session.use-case";
 import { SignInUseCase } from "./application/sign-in.use-case";
 import { SignUpUseCase } from "./application/sign-up.use-case";
@@ -12,14 +13,16 @@ import { createEmailService } from "./infrastructure/email/email-service.factory
 import { JwtAccessTokenService } from "./infrastructure/jwt-access-token.service";
 import { DrizzleUnitOfWork } from "./infrastructure/unit-of-work";
 import { AuthController } from "./interface/auth.controller";
+import { ConfirmAccountController } from "./interface/confirm-account.controller";
 import { SessionGuard } from "./interface/session.guard";
 import { SignInController } from "./interface/sign-in.controller";
 
 @Module({
-  controllers: [AuthController, SignInController],
+  controllers: [AuthController, SignInController, ConfirmAccountController],
   providers: [
     SignUpUseCase,
     SignInUseCase,
+    ConfirmAccountUseCase,
     GetCurrentSessionUseCase,
     SessionGuard,
     DatabaseClient,

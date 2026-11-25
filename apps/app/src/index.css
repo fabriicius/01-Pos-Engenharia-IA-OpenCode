@@ -47,17 +47,29 @@ h1 {
 }
 
 .sign-up-page,
-.sign-in-page {
+.sign-in-page,
+.confirm-account-page {
   max-width: 30rem;
   margin: 0 auto;
   padding: clamp(1rem, 4vw, 3rem) 0;
 }
 
 .sign-up-page h1,
-.sign-in-page h1 {
+.sign-in-page h1,
+.confirm-account-page h1 {
   font-size: clamp(1.75rem, 4vw, 2.5rem);
   padding-bottom: 0.75rem;
   border-bottom: 1px solid var(--pale-sky);
+}
+
+.confirm-account-page a {
+  color: var(--ink);
+  text-underline-offset: 3px;
+}
+
+.confirm-account-page a:focus-visible {
+  outline: 2px solid var(--powder-blue);
+  outline-offset: 2px;
 }
 
 form {
