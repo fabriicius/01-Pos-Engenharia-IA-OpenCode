@@ -47,6 +47,7 @@ Probes after `infra:up`:
 | `curl http://localhost:5173/`                               | Page with `<h1>Hello World</h1>`, title "Hello World" |
 | `curl http://localhost:5173/auth/sign-up`                   | Public sign-up form                                   |
 | `curl http://localhost:5173/auth/sign-in`                   | Public sign-in form                                   |
+| `curl http://localhost:5173/auth/confirm-account`           | Public confirmation page; no token consumed by GET    |
 | `curl http://localhost:5173/app/home`                       | Unguarded placeholder page                            |
 | `curl http://localhost:3100/ready`                          | Loki ready                                            |
 | `curl http://localhost:3200/ready`                          | Tempo `ready`                                         |
@@ -66,13 +67,25 @@ After `npm run infra:up` and `npm run db:migrate` (with `npm run dev` running):
 3. Submit valid values — the button reads "Creating account…" while in flight, then the page stays on `/auth/sign-up` with "Check your email to confirm your account."
 4. With no credentials for the selected provider, stdout contains the fallback warning and the full "Confirm your account" message with an `{APP_URL}/auth/confirm-account?token={TOKEN}` link.
 5. Inspect `users` and `account_confirmation_tokens` — lowercased email, bcrypt hash, status `pending`, token hash only, `used_at` null and `expires_at` about 24 hours after creation.
-6. Repeat the same email in a different letter case — HTTP 409, no second account and no second email. Following the confirmation link is deferred to `003-confirm-account`.
+6. Repeat the same email in a different letter case — HTTP 409, no second account and no second email. The emailed link is consumed by the confirmation checks below (implemented in `003-confirm-account`).
 7. Stop the email provider with credentials still configured — HTTP 502 and no leftover `pending` account.
 8. Open `/` and `/app/home` — both still render the hello-world heading; `/` keeps `GET /` → `{"message":"Hello World"}`.
 
+### Confirmation checks
+
+After `npm run infra:up`, `npm run db:migrate` and a fresh sign-up (console fallback prints the link when no email credentials are configured):
+
+1. Open the emailed `{APP_URL}/auth/confirm-account?token={TOKEN}` link once — "Confirming your account…" appears, then the browser lands on `/app/home` with `localStorage.auth_token` set; `GET /api/v1/auth/me` with that token returns 200.
+2. Inspect `users` and `account_confirmation_tokens`: status `active`, `used_at` non-null with unchanged `token_hash`, and `session_version` incremented by exactly one. One "A new session was created" email contains the UTC time and "If this wasn't you, change your password."
+3. Open the same link again — "This confirmation link is invalid or has expired." with a link to `/auth/sign-up`; no second email and no further version increment.
+4. POST an unknown token and a token whose `expires_at` is in the past to `/api/v1/auth/confirm-account` — the same generic 410 and no account changes. POST a body without `token` — 400 with en-US validation errors.
+5. Fetch the page URL without following the POST (scanner prefetch simulation) — the account stays `pending`, the token stays unused and no notification is sent.
+6. Force `EmailService` to throw — 502, `users.status` back to `pending`, `used_at` null, version restored, no usable token returned.
+7. Optional real-SQL probe: `RUN_DB_PROBE=1 npm run test -w api` exercises the conditional claim/release and activation/restore against local Postgres; it is skipped when the env var is absent.
+
 ### Sign-in checks
 
-After `npm run infra:up`, `npm run db:migrate` and a confirmed account (create one via sign-up, then consume the confirmation link once `003-confirm-account` lands — until then, set `users.status = 'active'` manually for QA):
+After `npm run infra:up`, `npm run db:migrate` and a confirmed account (sign up and consume the confirmation link once as above):
 
 1. Open `/auth/sign-in` — labelled email/password fields in keyboard order, visible focus, responsive light theme.
 2. Submit valid credentials — the button reads "Signing in…" while in flight, then the browser lands on `/app/home` and `localStorage.auth_token` holds the JWT.

@@ -14,13 +14,13 @@
 
 ### Workspaces
 
-| Path                         | Package                   | Role                                                                       | Stack                                                                                                       | Status    |
-| ---------------------------- | ------------------------- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | --------- |
-| `apps/api`                   | `api`                     | HTTP API (port 3000): `GET /` and `/api/v1/auth/*`                         | NestJS, TypeScript, Drizzle/Postgres, class-validator, bcrypt, jsonwebtoken, Nodemailer, Vitest + Supertest | [current] |
-| `apps/app`                   | `app`                     | Web client (port 5173): `/`, `/auth/sign-up`, `/auth/sign-in`, `/app/home` | React 19, React Router 7, Vite 8, TypeScript, Vitest                                                        | [current] |
-| `packages/ui`                | `@repo/ui`                | Shared React component library                                             | React 19, TypeScript                                                                                        | [current] |
-| `packages/eslint-config`     | `@repo/eslint-config`     | Shared ESLint config                                                       | ESLint 10                                                                                                   | [current] |
-| `packages/typescript-config` | `@repo/typescript-config` | Shared TSConfig presets                                                    | TypeScript                                                                                                  | [current] |
+| Path                         | Package                   | Role                                                                                                | Stack                                                                                                       | Status    |
+| ---------------------------- | ------------------------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | --------- |
+| `apps/api`                   | `api`                     | HTTP API (port 3000): `GET /` and `/api/v1/auth/*`                                                  | NestJS, TypeScript, Drizzle/Postgres, class-validator, bcrypt, jsonwebtoken, Nodemailer, Vitest + Supertest | [current] |
+| `apps/app`                   | `app`                     | Web client (port 5173): `/`, `/auth/sign-up`, `/auth/sign-in`, `/auth/confirm-account`, `/app/home` | React 19, React Router 7, Vite 8, TypeScript, Vitest                                                        | [current] |
+| `packages/ui`                | `@repo/ui`                | Shared React component library                                                                      | React 19, TypeScript                                                                                        | [current] |
+| `packages/eslint-config`     | `@repo/eslint-config`     | Shared ESLint config                                                                                | ESLint 10                                                                                                   | [current] |
+| `packages/typescript-config` | `@repo/typescript-config` | Shared TSConfig presets                                                                             | TypeScript                                                                                                  | [current] |
 
 The starter Next.js apps `apps/web` and `apps/docs` were removed by the foundation spec. Next.js-only dependencies (`next`, `@next/eslint-plugin-next`) and the `./next-js` ESLint export remain installed but are used by no workspace (D-13 in `.adrs/0001-foundation.md`).
 
@@ -68,16 +68,16 @@ npm run db:migrate   # drizzle-kit migrate
 
 ### Local services and ports
 
-| Service             | Port  | Notes                                                                                   |
-| ------------------- | ----- | --------------------------------------------------------------------------------------- |
-| API (`apps/api`)    | 3000  | `GET /` → `{"message":"Hello World"}`; `/api/v1/auth/sign-up`, `sign-in`, `me`          |
-| Client (`apps/app`) | 5173  | `/` → `<h1>Hello World</h1>`; `/auth/sign-up`; `/auth/sign-in`; `/app/home` (unguarded) |
-| Grafana             | 3002  | Loki (default), Tempo, Mimir datasources provisioned                                    |
-| Loki                | 3100  | Logs                                                                                    |
-| Tempo               | 3200  | Traces                                                                                  |
-| Supabase Studio     | 54323 | Local dashboard                                                                         |
-| Supabase Postgres   | 54322 | `DATABASE_URL` target for `db:migrate`                                                  |
-| Mimir               | 9009  | Metrics                                                                                 |
+| Service             | Port  | Notes                                                                                                            |
+| ------------------- | ----- | ---------------------------------------------------------------------------------------------------------------- |
+| API (`apps/api`)    | 3000  | `GET /` → `{"message":"Hello World"}`; `/api/v1/auth/sign-up`, `sign-in`, `confirm-account`, `me`                |
+| Client (`apps/app`) | 5173  | `/` → `<h1>Hello World</h1>`; `/auth/sign-up`; `/auth/sign-in`; `/auth/confirm-account`; `/app/home` (unguarded) |
+| Grafana             | 3002  | Loki (default), Tempo, Mimir datasources provisioned                                                             |
+| Loki                | 3100  | Logs                                                                                                             |
+| Tempo               | 3200  | Traces                                                                                                           |
+| Supabase Studio     | 54323 | Local dashboard                                                                                                  |
+| Supabase Postgres   | 54322 | `DATABASE_URL` target for `db:migrate`                                                                           |
+| Mimir               | 9009  | Metrics                                                                                                          |
 
 Local defaults live in `.env.example`; copy it to `.env` before starting the stack. These credentials are development-only.
 
@@ -92,6 +92,7 @@ Local defaults live in `.env.example`; copy it to `.env` before starting the sta
 - Email provider details and the en-US/versioning conventions are recorded in ADR 0002.
 - Sign-in extends the same slice: `SignInUseCase` verifies credentials and increments `session_version` atomically via `UPDATE ... RETURNING`, issues a JWT through the `AccessTokenService` port (`JwtAccessTokenService`), sends "A new session was created" and compensates a failed email with a conditional version restore. `GetCurrentSessionUseCase` and `SessionGuard` back `GET /auth/me`. `drizzle/0002_sign_in.sql` adds `session_version integer not null default 0`.
 - Client: `SignInPage` posts credentials through `apiFetch`, stores `auth_token`, navigates to `/app/home`, and the shared helper adds `Authorization: Bearer` and removes the token on 401. The JWT/version and localStorage decisions are recorded in ADR 0003.
+- `003-confirm-account` consumes the 001 token: `POST /api/v1/auth/confirm-account` claims an unused, unexpired hash with a conditional update, activates the account and increments `session_version` in one transaction, then signs the same 002 JWT and sends "A new session was created". Invalid, expired, used and already-active cases all return one generic 410; a failed email restores all three writes and returns 502. The public `/auth/confirm-account?token={TOKEN}` page POSTs the query token once and navigates to `/app/home` (ADR 0004). No resend endpoint exists in this initiative.
 
 ## Target architecture
 

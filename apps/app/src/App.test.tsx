@@ -1,6 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import indexHtml from "../index.html?raw";
 import { App } from "./App";
 
@@ -12,7 +12,10 @@ function renderAt(path: string): void {
   );
 }
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 describe("application routes", () => {
   it("renders exactly one level-one heading at /", () => {
@@ -41,6 +44,21 @@ describe("application routes", () => {
     ).toBeTruthy();
     expect(screen.getByLabelText("Email")).toBeTruthy();
     expect(screen.getByLabelText("Password")).toBeTruthy();
+  });
+
+  it("renders the public confirmation page at /auth/confirm-account", () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise(() => undefined)),
+    );
+    renderAt("/auth/confirm-account?token=valid-token");
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Confirm account" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toBe(
+      "Confirming your account…",
+    );
   });
 
   it("renders the unguarded placeholder at /app/home", () => {

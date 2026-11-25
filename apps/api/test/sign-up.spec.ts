@@ -13,6 +13,7 @@ import {
   PasswordHasher,
   PendingAccountInput,
   PersistencePorts,
+  TokenClaim,
   UnitOfWork,
 } from "../src/auth/domain/ports";
 import { AppModule } from "../src/app.module";
@@ -130,6 +131,17 @@ class RecordingAccountRepository extends AccountRepository {
   ): Promise<void> {
     return undefined;
   }
+
+  async activateIfPending(_id: string): Promise<number | null> {
+    return 1;
+  }
+
+  async restorePendingSession(
+    _id: string,
+    _issuedVersion: number,
+  ): Promise<void> {
+    return undefined;
+  }
 }
 
 class RecordingConfirmationTokenRepository extends ConfirmationTokenRepository {
@@ -143,6 +155,17 @@ class RecordingConfirmationTokenRepository extends ConfirmationTokenRepository {
 
   async removeByUserId(userId: string): Promise<void> {
     this.owner.removedTokenUserIds.push(userId);
+  }
+
+  async claimByHash(
+    _tokenHash: string,
+    _now: Date,
+  ): Promise<TokenClaim | null> {
+    return null;
+  }
+
+  async releaseClaim(_tokenHash: string, _claimedUsedAt: Date): Promise<void> {
+    return undefined;
   }
 }
 

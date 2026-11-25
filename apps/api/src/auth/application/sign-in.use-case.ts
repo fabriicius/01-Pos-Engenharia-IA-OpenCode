@@ -11,6 +11,7 @@ import {
 } from "../domain/errors";
 import { EmailService } from "../domain/email";
 import { PasswordHasher, UnitOfWork } from "../domain/ports";
+import { sessionEmailText } from "../domain/session-email";
 
 export interface SignInInput {
   email: string;
@@ -61,7 +62,10 @@ export class SignInUseCase {
       await this.emailService.send({
         to: account.email,
         subject: "A new session was created",
-        text: this.sessionEmailText(now),
+        text: sessionEmailText(
+          this.config.get<string>("APP_URL") ?? "http://localhost:5173",
+          now,
+        ),
       });
     } catch {
       await this.unitOfWork.run((repositories) =>
@@ -79,19 +83,5 @@ export class SignInUseCase {
       tokenType: "Bearer",
       expiresIn: ACCESS_TOKEN_TTL_SECONDS,
     };
-  }
-
-  private sessionEmailText(now: Date): string {
-    const appUrl =
-      this.config.get<string>("APP_URL") ?? "http://localhost:5173";
-
-    return [
-      "Hello,",
-      "",
-      `A new session was created for your account at ${now.toISOString()} (UTC).`,
-      `You can review your account at ${appUrl.replace(/\/$/, "")}/app/home.`,
-      "",
-      "If this wasn't you, change your password.",
-    ].join("\n");
   }
 }

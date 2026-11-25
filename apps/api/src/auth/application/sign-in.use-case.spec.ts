@@ -15,6 +15,7 @@ import {
   PasswordHasher,
   PendingAccountInput,
   PersistencePorts,
+  TokenClaim,
   UnitOfWork,
 } from "../domain/ports";
 import { SignInUseCase } from "./sign-in.use-case";
@@ -59,6 +60,17 @@ class MemoryAccountRepository extends AccountRepository {
       row.sessionVersion = newVersion;
     }
   }
+
+  async activateIfPending(_id: string): Promise<number | null> {
+    return 1;
+  }
+
+  async restorePendingSession(
+    _id: string,
+    _issuedVersion: number,
+  ): Promise<void> {
+    return undefined;
+  }
 }
 
 class MemoryUnitOfWork extends UnitOfWork {
@@ -81,6 +93,17 @@ class MemoryConfirmationTokenRepository extends ConfirmationTokenRepository {
   }
 
   async removeByUserId(_userId: string): Promise<void> {
+    return undefined;
+  }
+
+  async claimByHash(
+    _tokenHash: string,
+    _now: Date,
+  ): Promise<TokenClaim | null> {
+    return null;
+  }
+
+  async releaseClaim(_tokenHash: string, _claimedUsedAt: Date): Promise<void> {
     return undefined;
   }
 }
