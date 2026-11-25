@@ -3,6 +3,7 @@ import { PersistencePorts, UnitOfWork } from "../domain/ports";
 import { DrizzleAccountRepository } from "./account.repository";
 import { DrizzleConfirmationTokenRepository } from "./confirmation-token.repository";
 import { DatabaseClient } from "./database";
+import { DrizzlePasswordResetTokenRepository } from "./password-reset-token.repository";
 
 @Injectable()
 export class DrizzleUnitOfWork extends UnitOfWork {
@@ -17,6 +18,9 @@ export class DrizzleUnitOfWork extends UnitOfWork {
       work({
         accounts: new DrizzleAccountRepository(transaction),
         confirmationTokens: new DrizzleConfirmationTokenRepository(transaction),
+        passwordResetTokens: new DrizzlePasswordResetTokenRepository(
+          transaction,
+        ),
       }),
     );
   }

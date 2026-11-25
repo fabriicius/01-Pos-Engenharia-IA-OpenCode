@@ -10,7 +10,10 @@ import {
   AccountRepository,
   ConfirmationTokenInput,
   ConfirmationTokenRepository,
+  LatestPasswordResetToken,
   PasswordHasher,
+  PasswordResetTokenInput,
+  PasswordResetTokenRepository,
   PendingAccountInput,
   PersistencePorts,
   TokenClaim,
@@ -115,6 +118,10 @@ class RecordingAccountRepository extends AccountRepository {
     return row === undefined ? null : { ...row, sessionVersion: 0 };
   }
 
+  async findByEmailForUpdate(email: string): Promise<AccountRecord | null> {
+    return this.findByEmail(email);
+  }
+
   async findById(id: string): Promise<AccountRecord | null> {
     const row = this.owner.accounts.find((entry) => entry.id === id);
     return row === undefined ? null : { ...row, sessionVersion: 0 };
@@ -169,6 +176,29 @@ class RecordingConfirmationTokenRepository extends ConfirmationTokenRepository {
   }
 }
 
+class NoopPasswordResetTokenRepository extends PasswordResetTokenRepository {
+  async create(_input: PasswordResetTokenInput): Promise<void> {
+    return undefined;
+  }
+
+  async findNewestUnconsumedByUserId(
+    _userId: string,
+  ): Promise<LatestPasswordResetToken | null> {
+    return null;
+  }
+
+  async invalidateUnconsumedByUserId(
+    _userId: string,
+    _now: Date,
+  ): Promise<void> {
+    return undefined;
+  }
+
+  async removeById(_id: string): Promise<void> {
+    return undefined;
+  }
+}
+
 class RecordingUnitOfWork extends UnitOfWork {
   readonly accounts: PendingAccountInput[] = [];
   readonly tokens: ConfirmationTokenInput[] = [];
@@ -186,6 +216,7 @@ class RecordingUnitOfWork extends UnitOfWork {
     return work({
       accounts: new RecordingAccountRepository(this),
       confirmationTokens: new RecordingConfirmationTokenRepository(this),
+      passwordResetTokens: new NoopPasswordResetTokenRepository(),
     });
   }
 }
