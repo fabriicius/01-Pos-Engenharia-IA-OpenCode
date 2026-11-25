@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { ConfirmAccountUseCase } from "./application/confirm-account.use-case";
+import { ForgotPasswordUseCase } from "./application/forgot-password.use-case";
 import { GetCurrentSessionUseCase } from "./application/get-current-session.use-case";
 import { SignInUseCase } from "./application/sign-in.use-case";
 import { SignUpUseCase } from "./application/sign-up.use-case";
@@ -14,15 +15,22 @@ import { JwtAccessTokenService } from "./infrastructure/jwt-access-token.service
 import { DrizzleUnitOfWork } from "./infrastructure/unit-of-work";
 import { AuthController } from "./interface/auth.controller";
 import { ConfirmAccountController } from "./interface/confirm-account.controller";
+import { ForgotPasswordController } from "./interface/forgot-password.controller";
 import { SessionGuard } from "./interface/session.guard";
 import { SignInController } from "./interface/sign-in.controller";
 
 @Module({
-  controllers: [AuthController, SignInController, ConfirmAccountController],
+  controllers: [
+    AuthController,
+    SignInController,
+    ConfirmAccountController,
+    ForgotPasswordController,
+  ],
   providers: [
     SignUpUseCase,
     SignInUseCase,
     ConfirmAccountUseCase,
+    ForgotPasswordUseCase,
     GetCurrentSessionUseCase,
     SessionGuard,
     DatabaseClient,

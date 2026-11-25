@@ -7,7 +7,10 @@ import {
   AccountRepository,
   ConfirmationTokenInput,
   ConfirmationTokenRepository,
+  LatestPasswordResetToken,
   PasswordHasher,
+  PasswordResetTokenInput,
+  PasswordResetTokenRepository,
   PendingAccountInput,
   PersistencePorts,
   TokenClaim,
@@ -38,6 +41,10 @@ class FakeAccountRepository implements AccountRepository {
   async findByEmail(email: string): Promise<AccountRecord | null> {
     const row = this.rows.find((entry) => entry.email === email.toLowerCase());
     return row === undefined ? null : { ...row, sessionVersion: 0 };
+  }
+
+  async findByEmailForUpdate(email: string): Promise<AccountRecord | null> {
+    return this.findByEmail(email);
   }
 
   async findById(id: string): Promise<AccountRecord | null> {
@@ -92,12 +99,36 @@ class FakeConfirmationTokenRepository implements ConfirmationTokenRepository {
   }
 }
 
+class NoopPasswordResetTokenRepository extends PasswordResetTokenRepository {
+  async create(_input: PasswordResetTokenInput): Promise<void> {
+    return undefined;
+  }
+
+  async findNewestUnconsumedByUserId(
+    _userId: string,
+  ): Promise<LatestPasswordResetToken | null> {
+    return null;
+  }
+
+  async invalidateUnconsumedByUserId(
+    _userId: string,
+    _now: Date,
+  ): Promise<void> {
+    return undefined;
+  }
+
+  async removeById(_id: string): Promise<void> {
+    return undefined;
+  }
+}
+
 class FakeUnitOfWork extends UnitOfWork {
   readonly accounts = new FakeAccountRepository();
   readonly confirmationTokens = new FakeConfirmationTokenRepository();
   readonly repositories: PersistencePorts = {
     accounts: this.accounts,
     confirmationTokens: this.confirmationTokens,
+    passwordResetTokens: new NoopPasswordResetTokenRepository(),
   };
 
   async run<T>(

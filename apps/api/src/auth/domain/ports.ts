@@ -27,6 +27,18 @@ export interface AccountRecord {
   sessionVersion: number;
 }
 
+export interface PasswordResetTokenInput {
+  id: string;
+  userId: string;
+  tokenHash: string;
+  expiresAt: Date;
+  createdAt: Date;
+}
+
+export interface LatestPasswordResetToken {
+  createdAt: Date;
+}
+
 export interface TokenClaim {
   userId: string;
   usedAt: Date;
@@ -35,12 +47,14 @@ export interface TokenClaim {
 export interface PersistencePorts {
   accounts: AccountRepository;
   confirmationTokens: ConfirmationTokenRepository;
+  passwordResetTokens: PasswordResetTokenRepository;
 }
 
 export abstract class AccountRepository {
   abstract create(input: PendingAccountInput): Promise<void>;
   abstract remove(id: string): Promise<void>;
   abstract findByEmail(email: string): Promise<AccountRecord | null>;
+  abstract findByEmailForUpdate(email: string): Promise<AccountRecord | null>;
   abstract findById(id: string): Promise<AccountRecord | null>;
   abstract incrementSessionVersion(id: string): Promise<number>;
   abstract setSessionVersionIfVersion(
@@ -63,6 +77,18 @@ export abstract class ConfirmationTokenRepository {
     now: Date,
   ): Promise<TokenClaim | null>;
   abstract releaseClaim(tokenHash: string, claimedUsedAt: Date): Promise<void>;
+}
+
+export abstract class PasswordResetTokenRepository {
+  abstract create(input: PasswordResetTokenInput): Promise<void>;
+  abstract findNewestUnconsumedByUserId(
+    userId: string,
+  ): Promise<LatestPasswordResetToken | null>;
+  abstract invalidateUnconsumedByUserId(
+    userId: string,
+    now: Date,
+  ): Promise<void>;
+  abstract removeById(id: string): Promise<void>;
 }
 
 export abstract class PasswordHasher {

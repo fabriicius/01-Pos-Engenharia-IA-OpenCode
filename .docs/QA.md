@@ -48,6 +48,7 @@ Probes after `infra:up`:
 | `curl http://localhost:5173/auth/sign-up`                   | Public sign-up form                                   |
 | `curl http://localhost:5173/auth/sign-in`                   | Public sign-in form                                   |
 | `curl http://localhost:5173/auth/confirm-account`           | Public confirmation page; no token consumed by GET    |
+| `curl http://localhost:5173/auth/forgot-password`           | Public reset-request form                             |
 | `curl http://localhost:5173/app/home`                       | Unguarded placeholder page                            |
 | `curl http://localhost:3100/ready`                          | Loki ready                                            |
 | `curl http://localhost:3200/ready`                          | Tempo `ready`                                         |
@@ -96,6 +97,19 @@ After `npm run infra:up`, `npm run db:migrate` and a confirmed account (sign up 
 7. Force an email failure by configuring a broken adapter — 502, `session_version` restored, no token returned.
 8. Confirm `users.session_version` starts at 0, increases by exactly one per successful sign-in, and that `npm run db:migrate` remains idempotent.
 9. Re-check `GET /` and a fresh sign-up — the earlier contracts still work.
+
+### Forgot-password checks
+
+After `npm run infra:up`, `npm run db:migrate` and a confirmed account (sign up and consume the confirmation link once as above):
+
+1. Open `/auth/forgot-password` — one labelled email field, keyboard-reachable controls with visible focus, responsive light theme and no dark mode. Submit an empty or malformed value — en-US `role="alert"` validation and no request.
+2. Submit the active email — the button reads "Sending link…" while in flight, then the page stays put with exactly "If an account exists for that email, a password reset link has been sent." and a `/auth/sign-in` link; the HTTP response body is byte-identical.
+3. Submit an unknown email and a `pending` email — the same 202 body and page text, no token row and no email. Extra fields or a missing email return 400.
+4. Read the console fallback (or Mailtrap) — one "Reset your password" email links to `{APP_URL}/auth/reset-password?token={TOKEN}`, states one-hour expiry and says "If you didn't request this, you can ignore this email."
+5. Inspect `password_reset_tokens` — exactly one row for the account with SHA-256 `token_hash` (no raw token), `used_at` null and `expires_at` about one hour after `created_at`. Repeat inside 60 seconds — no second email, no new row and the original row unchanged.
+6. After more than 60 seconds, submit again — one new email/row and the previous unconsumed row now has non-null `used_at`. Force `EmailService` to throw — the new row is gone, the error is logged without the raw token or email, and the response is still the identical 202.
+7. Run `npm run db:migrate` a second time and re-check `GET /`, `/`, sign-up, sign-in, confirmation and `/auth/me`; earlier contracts and the migrated table remain intact.
+8. Optional real-SQL probe: `RUN_DB_PROBE=1 npm run test -w api` exercises row selection, invalidation, removal, the partial unique index and the account row lock against local Postgres; it is skipped when the env var is absent.
 
 ## Hook checks
 

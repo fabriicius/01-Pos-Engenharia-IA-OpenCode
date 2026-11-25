@@ -12,7 +12,7 @@
 ## Current repository practices
 
 - Monorepo managed by npm workspaces + Turborepo; Node `>=22`.
-- Apps: `apps/api` (NestJS API on port 3000: `GET /` hello world plus versioned sign-up/sign-in/confirm-account/`me` endpoints) and `apps/app` (React + Vite client on port 5173: `/`, `/auth/sign-up`, `/auth/sign-in`, `/auth/confirm-account` and `/app/home`).
+- Apps: `apps/api` (NestJS API on port 3000: `GET /` hello world plus versioned sign-up/sign-in/confirm-account/forgot-password/`me` endpoints) and `apps/app` (React + Vite client on port 5173: `/`, `/auth/sign-up`, `/auth/sign-in`, `/auth/confirm-account`, `/auth/forgot-password` and `/app/home`).
 - Shared packages: `@repo/ui`, `@repo/eslint-config`, `@repo/typescript-config`.
 - Lint with ESLint 10 and format with Prettier; `npm run code:fix` runs both with `--fix`/write. OXLint/OXFmt are not used (ADR 0001). For TypeScript files, ESLint's `no-undef` rule is disabled because `check-types` resolves identifiers and globals more accurately than the Babel parser (ADR 0002).
 - Type-check with TypeScript through `npm run check-types` or its alias `npm run types:check`.
@@ -43,9 +43,10 @@ The four layers are implemented for the auth slice under `apps/api/src/auth/` (`
 
 - All new endpoints are mounted under the global `api/v1` prefix by `apps/api/src/setup.ts`; `GET /` is the sole exclusion and keeps the foundation contract. Client code calls `${VITE_API_URL}/api/v1/...`.
 - Request bodies are validated by a global `ValidationPipe` with `whitelist`, `forbidNonWhitelisted` and `transform`; unknown fields return 400.
-- Email is sent through the `EmailService` port. `EMAIL_PROVIDER` selects `mailtrap` by default in development/test and `resend` in production; missing credentials select the console fallback. `APP_URL` builds confirmation links. See `.env.example` and ADR 0002.
+- Email is sent through the `EmailService` port. `EMAIL_PROVIDER` selects `mailtrap` by default in development/test and `resend` in production; missing credentials select the console fallback. `APP_URL` builds confirmation and reset links (no new environment variable). See `.env.example` and ADR 0002.
 - Sessions are HS256 JWTs carrying `sub` and a `ver` claim matched against `users.session_version`. The counter is incremented atomically on each sign-in, so the last login wins; `GET /api/v1/auth/me` validates the token and version. `JWT_SECRET` signs tokens (development-only default in `.env.example`, mandatory in production). CORS allows the `Authorization` header; see ADR 0003.
 - `POST /api/v1/auth/confirm-account` accepts `{ token }` in the body, never in a URL: the emailed link stays `{APP_URL}/auth/confirm-account?token={TOKEN}` and the page POSTs the query token once. Success activates the account, increments `session_version`, returns the 002 session shape and sends the same "A new session was created" email. Unknown, expired, used and already-active tokens all return the same generic 410; there is deliberately no self-service resend endpoint in this initiative (ADR 0004).
+- `POST /api/v1/auth/forgot-password` accepts `{ email }` and returns the identical 202 message for active, unknown, `pending` and throttled addresses. Only an active account gets a one-hour hashed reset token and a "Reset your password" email. The cooldown comes from `password_reset_tokens.created_at` (60 seconds), a new request invalidates older unconsumed rows in the same transaction, and a failed dispatch deletes the new row without changing the response (ADR 0005). Token consumption and the password change are deferred to `005-reset-password`.
 - The client stores the token under `localStorage` key `auth_token`, sends it as `Authorization: Bearer`, and clears it on any 401. This is an accepted XSS tradeoff with the mitigations recorded in ADR 0003: no third-party scripts, no token logging, 24-hour expiry and 401 cleanup.
 
 ## Language and naming

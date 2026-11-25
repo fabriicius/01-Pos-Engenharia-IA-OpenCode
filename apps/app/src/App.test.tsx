@@ -61,6 +61,18 @@ describe("application routes", () => {
     );
   });
 
+  it("renders the public forgot-password page at /auth/forgot-password", () => {
+    renderAt("/auth/forgot-password");
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Forgot password" }),
+    ).toBeTruthy();
+    expect(screen.getByLabelText("Email")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Send reset link" }),
+    ).toBeTruthy();
+  });
+
   it("renders the unguarded placeholder at /app/home", () => {
     renderAt("/app/home");
 

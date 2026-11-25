@@ -47,6 +47,17 @@ export class DrizzleAccountRepository extends AccountRepository {
     return toAccountRecord(rows[0]);
   }
 
+  async findByEmailForUpdate(email: string): Promise<AccountRecord | null> {
+    const rows = await this.transaction
+      .select()
+      .from(users)
+      .where(sql`lower(${users.email}) = ${email.toLowerCase()}`)
+      .limit(1)
+      .for("update");
+
+    return toAccountRecord(rows[0]);
+  }
+
   async findById(id: string): Promise<AccountRecord | null> {
     const rows = await this.transaction
       .select()
