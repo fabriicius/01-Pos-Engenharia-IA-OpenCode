@@ -1,6 +1,10 @@
-import { eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { DuplicateEmailError } from "../domain/errors";
-import { AccountRepository, PendingAccountInput } from "../domain/ports";
+import {
+  AccountRecord,
+  AccountRepository,
+  PendingAccountInput,
+} from "../domain/ports";
 import { Transaction } from "./database";
 import { isUniqueViolation } from "./pg-errors";
 import { users } from "./schema";
@@ -32,4 +36,67 @@ export class DrizzleAccountRepository extends AccountRepository {
   async remove(id: string): Promise<void> {
     await this.transaction.delete(users).where(eq(users.id, id));
   }
+
+  async findByEmail(email: string): Promise<AccountRecord | null> {
+    const rows = await this.transaction
+      .select()
+      .from(users)
+      .where(sql`lower(${users.email}) = ${email.toLowerCase()}`)
+      .limit(1);
+
+    return toAccountRecord(rows[0]);
+  }
+
+  async findById(id: string): Promise<AccountRecord | null> {
+    const rows = await this.transaction
+      .select()
+      .from(users)
+      .where(eq(users.id, id))
+      .limit(1);
+
+    return toAccountRecord(rows[0]);
+  }
+
+  async incrementSessionVersion(id: string): Promise<number> {
+    const rows = await this.transaction
+      .update(users)
+      .set({ sessionVersion: sql`${users.sessionVersion} + 1` })
+      .where(eq(users.id, id))
+      .returning({ sessionVersion: users.sessionVersion });
+
+    const version = rows[0]?.sessionVersion;
+    if (version === undefined) {
+      throw new Error("Account not found while incrementing session version.");
+    }
+    return version;
+  }
+
+  async setSessionVersionIfVersion(
+    id: string,
+    expectedVersion: number,
+    newVersion: number,
+  ): Promise<void> {
+    await this.transaction
+      .update(users)
+      .set({ sessionVersion: newVersion })
+      .where(and(eq(users.id, id), eq(users.sessionVersion, expectedVersion)));
+  }
+}
+
+type UserRow = typeof users.$inferSelect;
+
+function toAccountRecord(row: UserRow | undefined): AccountRecord | null {
+  if (row === undefined) {
+    return null;
+  }
+
+  return {
+    id: row.id,
+    firstName: row.firstName,
+    lastName: row.lastName,
+    email: row.email,
+    passwordHash: row.passwordHash,
+    status: row.status,
+    sessionVersion: row.sessionVersion,
+  };
 }

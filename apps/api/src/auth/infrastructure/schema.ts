@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  integer,
   pgTable,
   text,
   timestamp,
@@ -15,6 +16,7 @@ export const users = pgTable(
     lastName: text("last_name").notNull(),
     email: text("email").notNull(),
     passwordHash: text("password_hash").notNull(),
+    sessionVersion: integer("session_version").notNull().default(0),
     status: text("status", { enum: ["pending", "active"] })
       .notNull()
       .default("pending"),

@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import { EmailService, EmailMessage } from "../domain/email";
 import {
+  AccountRecord,
   AccountRepository,
   ConfirmationTokenInput,
   ConfirmationTokenRepository,
@@ -31,6 +32,28 @@ class FakeAccountRepository implements AccountRepository {
 
   async remove(id: string): Promise<void> {
     this.rows = this.rows.filter((row) => row.id !== id);
+  }
+
+  async findByEmail(email: string): Promise<AccountRecord | null> {
+    const row = this.rows.find((entry) => entry.email === email.toLowerCase());
+    return row === undefined ? null : { ...row, sessionVersion: 0 };
+  }
+
+  async findById(id: string): Promise<AccountRecord | null> {
+    const row = this.rows.find((entry) => entry.id === id);
+    return row === undefined ? null : { ...row, sessionVersion: 0 };
+  }
+
+  async incrementSessionVersion(_id: string): Promise<number> {
+    return 1;
+  }
+
+  async setSessionVersionIfVersion(
+    _id: string,
+    _expectedVersion: number,
+    _newVersion: number,
+  ): Promise<void> {
+    return undefined;
   }
 }
 
@@ -64,6 +87,10 @@ class FakeUnitOfWork extends UnitOfWork {
 class FakePasswordHasher extends PasswordHasher {
   async hash(plainPassword: string): Promise<string> {
     return `hashed:${plainPassword}`;
+  }
+
+  async compare(plainPassword: string, passwordHash: string): Promise<boolean> {
+    return passwordHash === `hashed:${plainPassword}`;
   }
 }
 

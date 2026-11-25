@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
+import { DEFAULT_API_URL, extractErrorMessage } from "../api-client";
 
-const DEFAULT_API_URL = "http://localhost:3000";
 const GENERIC_ERROR = "Unable to create account. Please try again.";
 
 type SubmitStatus = "idle" | "submitting" | "success";
@@ -16,26 +16,6 @@ interface SignUpValues {
 
 function readValue(formData: FormData, key: keyof SignUpValues): string {
   return String(formData.get(key) ?? "");
-}
-
-function extractErrorMessage(body: unknown): string | null {
-  if (typeof body !== "object" || body === null || !("message" in body)) {
-    return null;
-  }
-
-  const message = Reflect.get(body, "message");
-
-  if (typeof message === "string") {
-    return message;
-  }
-
-  if (Array.isArray(message)) {
-    return message
-      .filter((entry): entry is string => typeof entry === "string")
-      .join(" ");
-  }
-
-  return null;
 }
 
 export function SignUpPage() {

@@ -46,6 +46,7 @@ Probes after `infra:up`:
 | `curl http://localhost:3000/api/v1/does-not-exist`          | JSON `404`, API still up                              |
 | `curl http://localhost:5173/`                               | Page with `<h1>Hello World</h1>`, title "Hello World" |
 | `curl http://localhost:5173/auth/sign-up`                   | Public sign-up form                                   |
+| `curl http://localhost:5173/auth/sign-in`                   | Public sign-in form                                   |
 | `curl http://localhost:5173/app/home`                       | Unguarded placeholder page                            |
 | `curl http://localhost:3100/ready`                          | Loki ready                                            |
 | `curl http://localhost:3200/ready`                          | Tempo `ready`                                         |
@@ -68,6 +69,20 @@ After `npm run infra:up` and `npm run db:migrate` (with `npm run dev` running):
 6. Repeat the same email in a different letter case — HTTP 409, no second account and no second email. Following the confirmation link is deferred to `003-confirm-account`.
 7. Stop the email provider with credentials still configured — HTTP 502 and no leftover `pending` account.
 8. Open `/` and `/app/home` — both still render the hello-world heading; `/` keeps `GET /` → `{"message":"Hello World"}`.
+
+### Sign-in checks
+
+After `npm run infra:up`, `npm run db:migrate` and a confirmed account (create one via sign-up, then consume the confirmation link once `003-confirm-account` lands — until then, set `users.status = 'active'` manually for QA):
+
+1. Open `/auth/sign-in` — labelled email/password fields in keyboard order, visible focus, responsive light theme.
+2. Submit valid credentials — the button reads "Signing in…" while in flight, then the browser lands on `/app/home` and `localStorage.auth_token` holds the JWT.
+3. Read the console fallback (or Mailtrap) — one "A new session was created" email with a UTC timestamp and "If this wasn't you, change your password."
+4. Sign in a second time from another browser profile; call `GET /api/v1/auth/me` with the first token (401) and the second (200) — only the last session is valid.
+5. Try an unknown email, a wrong password and a `pending` account — the same generic 401 twice, 403 with confirmation guidance once; no email and no version change on failures.
+6. Send a stale/expired/tampered token and no header to `/auth/me` — 401 with no account data.
+7. Force an email failure by configuring a broken adapter — 502, `session_version` restored, no token returned.
+8. Confirm `users.session_version` starts at 0, increases by exactly one per successful sign-in, and that `npm run db:migrate` remains idempotent.
+9. Re-check `GET /` and a fresh sign-up — the earlier contracts still work.
 
 ## Hook checks
 

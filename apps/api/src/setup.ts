@@ -17,5 +17,8 @@ export function configureApp(app: INestApplication): void {
       transform: true,
     }),
   );
-  app.enableCors({ origin: CLIENT_ORIGIN });
+  app.enableCors({
+    origin: CLIENT_ORIGIN,
+    allowedHeaders: ["Content-Type", "Authorization"],
+  });
 }

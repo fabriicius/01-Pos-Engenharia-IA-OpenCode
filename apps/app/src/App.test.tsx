@@ -33,6 +33,16 @@ describe("application routes", () => {
     expect(screen.getByLabelText("Confirm password")).toBeTruthy();
   });
 
+  it("renders the public sign-in page at /auth/sign-in", () => {
+    renderAt("/auth/sign-in");
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Sign in" }),
+    ).toBeTruthy();
+    expect(screen.getByLabelText("Email")).toBeTruthy();
+    expect(screen.getByLabelText("Password")).toBeTruthy();
+  });
+
   it("renders the unguarded placeholder at /app/home", () => {
     renderAt("/app/home");
 

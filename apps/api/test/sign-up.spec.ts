@@ -6,6 +6,7 @@ import { SignUpUseCase } from "../src/auth/application/sign-up.use-case";
 import { DuplicateEmailError } from "../src/auth/domain/errors";
 import { EmailService } from "../src/auth/domain/email";
 import {
+  AccountRecord,
   AccountRepository,
   ConfirmationTokenInput,
   ConfirmationTokenRepository,
@@ -104,6 +105,30 @@ class RecordingAccountRepository extends AccountRepository {
 
   async remove(id: string): Promise<void> {
     this.owner.removedAccountIds.push(id);
+  }
+
+  async findByEmail(email: string): Promise<AccountRecord | null> {
+    const row = this.owner.accounts.find(
+      (entry) => entry.email === email.toLowerCase(),
+    );
+    return row === undefined ? null : { ...row, sessionVersion: 0 };
+  }
+
+  async findById(id: string): Promise<AccountRecord | null> {
+    const row = this.owner.accounts.find((entry) => entry.id === id);
+    return row === undefined ? null : { ...row, sessionVersion: 0 };
+  }
+
+  async incrementSessionVersion(_id: string): Promise<number> {
+    return 1;
+  }
+
+  async setSessionVersionIfVersion(
+    _id: string,
+    _expectedVersion: number,
+    _newVersion: number,
+  ): Promise<void> {
+    return undefined;
   }
 }
 

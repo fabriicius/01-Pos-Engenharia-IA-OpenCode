@@ -11,3 +11,31 @@ export class EmailDispatchError extends Error {
     this.name = "EmailDispatchError";
   }
 }
+
+export class InvalidCredentialsError extends Error {
+  constructor() {
+    super("Unable to sign in with the provided credentials.");
+    this.name = "InvalidCredentialsError";
+  }
+}
+
+export class AccountNotConfirmedError extends Error {
+  constructor() {
+    super("Please confirm your account before signing in.");
+    this.name = "AccountNotConfirmedError";
+  }
+}
+
+export class InvalidAccessTokenError extends Error {
+  constructor() {
+    super("Unable to authenticate with the provided token.");
+    this.name = "InvalidAccessTokenError";
+  }
+}
+
+export class SessionNotificationError extends Error {
+  constructor() {
+    super("Session notification email could not be delivered.");
+    this.name = "SessionNotificationError";
+  }
+}

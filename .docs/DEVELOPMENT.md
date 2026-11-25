@@ -12,7 +12,7 @@
 ## Current repository practices
 
 - Monorepo managed by npm workspaces + Turborepo; Node `>=22`.
-- Apps: `apps/api` (NestJS API on port 3000: `GET /` hello world plus versioned auth endpoints) and `apps/app` (React + Vite client on port 5173: `/`, `/auth/sign-up` and `/app/home`).
+- Apps: `apps/api` (NestJS API on port 3000: `GET /` hello world plus versioned sign-up/sign-in/`me` endpoints) and `apps/app` (React + Vite client on port 5173: `/`, `/auth/sign-up`, `/auth/sign-in` and `/app/home`).
 - Shared packages: `@repo/ui`, `@repo/eslint-config`, `@repo/typescript-config`.
 - Lint with ESLint 10 and format with Prettier; `npm run code:fix` runs both with `--fix`/write. OXLint/OXFmt are not used (ADR 0001). For TypeScript files, ESLint's `no-undef` rule is disabled because `check-types` resolves identifiers and globals more accurately than the Babel parser (ADR 0002).
 - Type-check with TypeScript through `npm run check-types` or its alias `npm run types:check`.
@@ -44,6 +44,8 @@ The four layers are implemented for the auth slice under `apps/api/src/auth/` (`
 - All new endpoints are mounted under the global `api/v1` prefix by `apps/api/src/setup.ts`; `GET /` is the sole exclusion and keeps the foundation contract. Client code calls `${VITE_API_URL}/api/v1/...`.
 - Request bodies are validated by a global `ValidationPipe` with `whitelist`, `forbidNonWhitelisted` and `transform`; unknown fields return 400.
 - Email is sent through the `EmailService` port. `EMAIL_PROVIDER` selects `mailtrap` by default in development/test and `resend` in production; missing credentials select the console fallback. `APP_URL` builds confirmation links. See `.env.example` and ADR 0002.
+- Sessions are HS256 JWTs carrying `sub` and a `ver` claim matched against `users.session_version`. The counter is incremented atomically on each sign-in, so the last login wins; `GET /api/v1/auth/me` validates the token and version. `JWT_SECRET` signs tokens (development-only default in `.env.example`, mandatory in production). CORS allows the `Authorization` header; see ADR 0003.
+- The client stores the token under `localStorage` key `auth_token`, sends it as `Authorization: Bearer`, and clears it on any 401. This is an accepted XSS tradeoff with the mitigations recorded in ADR 0003: no third-party scripts, no token logging, 24-hour expiry and 401 cleanup.
 
 ## Language and naming
 
