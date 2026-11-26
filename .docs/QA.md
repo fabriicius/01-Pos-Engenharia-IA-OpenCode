@@ -40,25 +40,25 @@ npm run infra:down    # supabase stop && docker compose down (volumes preserved)
 
 Probes after `infra:up`:
 
-| Check                                                       | Expected                                           |
-| ----------------------------------------------------------- | -------------------------------------------------- |
-| `curl http://localhost:3000/`                               | `200 application/json` `{"message":"Hello World"}` |
-| `curl http://localhost:3000/api/v1/does-not-exist`          | JSON `404`, API still up                           |
-| `curl http://localhost:5173/`                               | SPA shell; browser redirects to `/auth/sign-in`    |
-| `curl http://localhost:5173/auth/sign-up`                   | Public sign-up form                                |
-| `curl http://localhost:5173/auth/sign-in`                   | Public sign-in form                                |
-| `curl http://localhost:5173/auth/confirm-account`           | Public confirmation page; no token consumed by GET |
-| `curl http://localhost:5173/auth/forgot-password`           | Public reset-request form                          |
-| `curl http://localhost:5173/auth/reset-password`            | Public reset form; no token consumed by GET        |
-| `curl http://localhost:5173/app/home`                       | Unguarded placeholder page                         |
-| `curl http://localhost:3100/ready`                          | Loki ready                                         |
-| `curl http://localhost:3200/ready`                          | Tempo `ready`                                      |
-| `curl http://localhost:9009/ready`                          | Mimir `ready`                                      |
-| `curl -u admin:admin http://localhost:3002/api/health`      | Grafana database `ok`                              |
-| `curl -u admin:admin http://localhost:3002/api/datasources` | Loki, Tempo, Mimir present                         |
-| `npx supabase status`                                       | Studio 54323, Postgres 54322                       |
-| `docker compose ps`                                         | Four LGTM containers running                       |
-| `docker volume ls` after `infra:down`                       | LGTM and Supabase volumes still present            |
+| Check                                                       | Expected                                                |
+| ----------------------------------------------------------- | ------------------------------------------------------- |
+| `curl http://localhost:3000/`                               | `200 application/json` `{"message":"Hello World"}`      |
+| `curl http://localhost:3000/api/v1/does-not-exist`          | JSON `404`, API still up                                |
+| `curl http://localhost:5173/`                               | SPA shell; browser redirects to `/auth/sign-in`         |
+| `curl http://localhost:5173/auth/sign-up`                   | Public sign-up form                                     |
+| `curl http://localhost:5173/auth/sign-in`                   | Public sign-in form                                     |
+| `curl http://localhost:5173/auth/confirm-account`           | Public confirmation page; no token consumed by GET      |
+| `curl http://localhost:5173/auth/forgot-password`           | Public reset-request form                               |
+| `curl http://localhost:5173/auth/reset-password`            | Public reset form; no token consumed by GET             |
+| `curl http://localhost:5173/app/home`                       | SPA shell; browser redirects to sign-in without a token |
+| `curl http://localhost:3100/ready`                          | Loki ready                                              |
+| `curl http://localhost:3200/ready`                          | Tempo `ready`                                           |
+| `curl http://localhost:9009/ready`                          | Mimir `ready`                                           |
+| `curl -u admin:admin http://localhost:3002/api/health`      | Grafana database `ok`                                   |
+| `curl -u admin:admin http://localhost:3002/api/datasources` | Loki, Tempo, Mimir present                              |
+| `npx supabase status`                                       | Studio 54323, Postgres 54322                            |
+| `docker compose ps`                                         | Four LGTM containers running                            |
+| `docker volume ls` after `infra:down`                       | LGTM and Supabase volumes still present                 |
 
 ### Sign-up checks
 
@@ -71,7 +71,7 @@ After `npm run infra:up` and `npm run db:migrate` (with `npm run dev` running):
 5. Inspect `users` and `account_confirmation_tokens` — lowercased email, bcrypt hash, status `pending`, token hash only, `used_at` null and `expires_at` about 24 hours after creation.
 6. Repeat the same email in a different letter case — HTTP 409, no second account and no second email. The emailed link is consumed by the confirmation checks below (implemented in `003-confirm-account`).
 7. Stop the email provider with credentials still configured — HTTP 502 and no leftover `pending` account.
-8. Open `/` — it redirects to `/auth/sign-in`; open `/app/home` — it still renders the hello-world placeholder; `GET /` on the API keeps `{"message":"Hello World"}`.
+8. Open `/` — it redirects to `/auth/sign-in`; open `/app/home` — it redirects to `/auth/sign-in` until a session exists (see route protection checks); `GET /` on the API keeps `{"message":"Hello World"}`.
 
 ### Confirmation checks
 
@@ -124,6 +124,19 @@ After `npm run infra:up`, `npm run db:migrate` and a confirmed account with a fr
 6. Force `EmailService` to throw for a fresh token — the previous `password_hash`, null `used_at` and `session_version` are restored, the response is a generic 502 with no success email, and the same link works when the provider recovers.
 7. Confirm no raw token or plaintext password appears in responses or logs, run `npm run db:migrate` again, and re-check `GET /`, `/`, sign-up, sign-in, confirmation, forgot-password and `/auth/me`; earlier contracts remain intact.
 8. Optional real-SQL probe: `RUN_DB_PROBE=1 npm run test -w api` now also exercises conditional token claim/release and guarded password/version write/restore against local Postgres; it is skipped when the env var is absent.
+
+### Route protection checks
+
+After `npm run infra:up`, `npm run db:migrate` and a confirmed account (sign up and consume the confirmation link once as above):
+
+1. With `localStorage.auth_token` cleared, open `/app/home` — the browser redirects to `/auth/sign-in`, "Checking your session…" never renders a private page and no `Hello World` content appears. No `/auth/me` request is made without a token.
+2. Sign in, then open `/app/home` — "Checking your session…" (`role="status"`) is visible while `GET /api/v1/auth/me` is in flight, then the unchanged hello-world placeholder renders. The request carries `Authorization: Bearer {TOKEN}` and the token never appears in console logs.
+3. Open `/` — it still redirects to `/auth/sign-in` (ADR 0006); the API `GET /` still returns `{"message":"Hello World"}`. Do not restore a client hello-world page at `/`.
+4. While signed in, open `/auth/sign-in` and `/auth/sign-up` — both redirect to `/app/home` before the forms render.
+5. While signed in, open `/auth/confirm-account`, `/auth/forgot-password` and `/auth/reset-password` — each page renders without a redirect or an extra `/auth/me` call, so emailed confirmation/recovery links keep working. Use an invalid or dummy token when checking the confirmation page so no real link is consumed.
+6. Sign in from a second browser profile, then reload `/app/home` in the first — the first token is rejected with 401, `auth_token` is cleared and the browser redirects to `/auth/sign-in` without private content. A password reset revokes earlier tokens the same way.
+7. Stop the API (or block `localhost:3000`) with a token stored and open `/app/home` — "Unable to verify your session." (`role="alert"`) and a keyboard-reachable "Retry" button appear, and `auth_token` stays in `localStorage`. Restore the API, Tab to Retry (visible focus), press it — the page renders after a successful check.
+8. Re-run `npm run db:migrate` and re-check `GET /`, `/`, sign-up, sign-in, confirmation, forgot-password, reset-password and `/auth/me`; earlier contracts and the client-only guard boundary remain intact.
 
 ## Hook checks
 

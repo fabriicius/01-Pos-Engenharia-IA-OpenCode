@@ -14,6 +14,7 @@ function renderAt(path: string): void {
 
 afterEach(() => {
   cleanup();
+  localStorage.clear();
   vi.unstubAllGlobals();
 });
 
@@ -85,12 +86,28 @@ describe("application routes", () => {
     expect(screen.getByRole("button", { name: "Reset password" })).toBeTruthy();
   });
 
-  it("renders the unguarded placeholder at /app/home", () => {
+  it("redirects /app/home to sign-in when no token is stored", () => {
     renderAt("/app/home");
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Hello World" }),
+      screen.getByRole("heading", { level: 1, name: "Sign in" }),
     ).toBeTruthy();
+    expect(screen.getByLabelText("Email")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Hello World" })).toBeNull();
+  });
+
+  it("redirects a stored token from sign-in to the guarded home page", async () => {
+    localStorage.setItem("auth_token", "jwt-value");
+    const fetchMock = vi.fn().mockResolvedValue({ status: 200 } as Response);
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderAt("/auth/sign-in");
+
+    expect(screen.queryByRole("heading", { name: "Sign in" })).toBeNull();
+    expect(
+      await screen.findByRole("heading", { name: "Hello World" }),
+    ).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("declares the document title in index.html", () => {

@@ -3,7 +3,7 @@
 - **Spec:** 006-route-protection
 - **Status:** ready-for-implementation
 - **Created:** 2026-11-24
-- **Last updated:** 2026-11-24
+- **Last updated:** 2026-11-26
 - **Source:** feature-concept session (delegated by create-spec from the approved authentication breakdown)
 
 ## Problem & motivation
@@ -50,7 +50,7 @@ The router created in 001 has a `/auth/*` public area and an `/app/home` placeho
 - **[target]** `apps/app/src/App.tsx` — apply the guard to `/app/*`, apply the authenticated-user redirect to `/auth/sign-in` and `/auth/sign-up`, and leave the other `/auth/*` routes public.
 - **[target]** `apps/app/src/auth/route-guard/` states — "Checking your session…" loader, network-failure message with a Retry control, and en-US error text announced accessibly.
 - **[target]** `.docs/ARCHITECTURE.md`, `.docs/DEVELOPMENT.md`, `.docs/QA.md` and `README.md` — document the `/auth/*` vs `/app/*` boundary, the validation seam and the manual QA steps in the same change.
-- **[current, unchanged]** `apps/api` endpoints, Drizzle schema, `EmailService`, `.env.example`, `turbo.json`, `docker-compose.yml`, `@repo/*` packages and the hello-world page at `/`.
+- **[current, unchanged]** `apps/api` endpoints, Drizzle schema, `EmailService`, `.env.example`, `turbo.json`, `docker-compose.yml`, `@repo/*` packages, the `/` → `/auth/sign-in` redirect (ADR 0006) and the `/app/home` hello-world placeholder.
 
 ## Behavior
 
@@ -124,7 +124,7 @@ The router created in 001 has a `/auth/*` public area and an `/app/home` placeho
 - [ ] AC-8 — Given a stored valid token, when a browser opens `/auth/confirm-account`, `/auth/forgot-password` or `/auth/reset-password`, then the corresponding page renders and is not redirected.
 - [ ] AC-9 — Given no stored token, when a browser opens any `/auth/*` page, then that page renders without a validation call to `/auth/me`.
 - [ ] AC-10 — Given the change is committed, when a reviewer reads `.docs/ARCHITECTURE.md`, `.docs/DEVELOPMENT.md`, `.docs/QA.md` and `README.md`, then the `/auth/*` public and `/app/*` private boundary, the validation seam and the manual QA steps are documented.
-- [ ] AC-11 — Given `/app/home` is opened after sign-in, when the guard validates the token, then the hello-world placeholder from earlier specs is unchanged and no API endpoint beyond `/auth/me` was added by this spec.
+- [ ] AC-11 — Given `/app/home` is opened after sign-in, when the guard validates the token, then the `/app/home` hello-world placeholder from earlier specs is unchanged (the `/` → `/auth/sign-in` redirect from ADR 0006 stays intact) and no API endpoint beyond `/auth/me` was added by this spec.
 
 ## Open questions & assumptions
 
