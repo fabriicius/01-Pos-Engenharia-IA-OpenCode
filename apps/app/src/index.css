@@ -50,6 +50,26 @@ h1 {
   margin: 0.75rem 0 0;
 }
 
+.route-guard-status {
+  max-width: 30rem;
+  min-height: calc(100vh - 3rem);
+  margin: 0 auto;
+  display: grid;
+  place-content: center;
+  gap: 1rem;
+  text-align: center;
+}
+
+.route-guard-status p {
+  margin: 0;
+}
+
+.route-guard-status button {
+  width: auto;
+  justify-self: center;
+  padding-inline: 1.5rem;
+}
+
 .sign-up-page,
 .sign-in-page,
 .confirm-account-page,
@@ -172,7 +192,8 @@ button:disabled {
     padding: 1rem;
   }
 
-  .hello-world {
+  .hello-world,
+  .route-guard-status {
     min-height: calc(100vh - 2rem);
   }
 }

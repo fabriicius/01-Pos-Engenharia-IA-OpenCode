@@ -5,6 +5,7 @@ import {
   clearAuthToken,
   extractErrorMessage,
   getAuthToken,
+  hasAuthToken,
   setAuthToken,
 } from "./api-client";
 
@@ -69,6 +70,22 @@ describe("apiFetch", () => {
     setAuthToken("token");
     clearAuthToken();
     expect(getAuthToken()).toBeNull();
+  });
+});
+
+describe("hasAuthToken", () => {
+  it("is false when no token is stored", () => {
+    expect(hasAuthToken()).toBe(false);
+  });
+
+  it("is false when the stored token is empty", () => {
+    localStorage.setItem(AUTH_TOKEN_KEY, "");
+    expect(hasAuthToken()).toBe(false);
+  });
+
+  it("is true when a token is stored", () => {
+    setAuthToken("jwt-value");
+    expect(hasAuthToken()).toBe(true);
   });
 });
 
