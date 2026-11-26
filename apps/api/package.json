@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "dev": "tsx watch src/main.ts",
+    "dev": "node dev.mjs",
     "start": "node dist/main.js",
     "lint": "eslint . --max-warnings 0",
     "check-types": "tsc --noEmit -p tsconfig.json",
