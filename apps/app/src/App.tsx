@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { ConfirmAccountPage } from "./auth/confirm-account/ConfirmAccountPage";
 import { ForgotPasswordPage } from "./auth/forgot-password/ForgotPasswordPage";
+import { ResetPasswordPage } from "./auth/reset-password/ResetPasswordPage";
 import { SignInPage } from "./auth/sign-in/SignInPage";
 import { SignUpPage } from "./auth/sign-up/SignUpPage";
 
@@ -21,6 +22,7 @@ export function App() {
       <Route path="/auth/sign-in" element={<SignInPage />} />
       <Route path="/auth/confirm-account" element={<ConfirmAccountPage />} />
       <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
       <Route path="/app/home" element={<AppHomePage />} />
     </Routes>
   );

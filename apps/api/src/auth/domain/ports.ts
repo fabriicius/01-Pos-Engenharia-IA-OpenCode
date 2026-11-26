@@ -67,6 +67,17 @@ export abstract class AccountRepository {
     id: string,
     issuedVersion: number,
   ): Promise<void>;
+  abstract setPasswordAndIncrementVersionIfVersion(
+    id: string,
+    passwordHash: string,
+    expectedVersion: number,
+    newVersion: number,
+  ): Promise<number | null>;
+  abstract restorePasswordAndVersion(
+    id: string,
+    oldPasswordHash: string,
+    issuedVersion: number,
+  ): Promise<void>;
 }
 
 export abstract class ConfirmationTokenRepository {
@@ -89,6 +100,11 @@ export abstract class PasswordResetTokenRepository {
     now: Date,
   ): Promise<void>;
   abstract removeById(id: string): Promise<void>;
+  abstract claimByHash(
+    tokenHash: string,
+    now: Date,
+  ): Promise<TokenClaim | null>;
+  abstract releaseClaim(tokenHash: string, claimedUsedAt: Date): Promise<void>;
 }
 
 export abstract class PasswordHasher {

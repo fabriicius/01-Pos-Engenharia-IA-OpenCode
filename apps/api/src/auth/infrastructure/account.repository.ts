@@ -121,6 +121,35 @@ export class DrizzleAccountRepository extends AccountRepository {
         ),
       );
   }
+
+  async setPasswordAndIncrementVersionIfVersion(
+    id: string,
+    passwordHash: string,
+    expectedVersion: number,
+    newVersion: number,
+  ): Promise<number | null> {
+    const rows = await this.transaction
+      .update(users)
+      .set({ passwordHash, sessionVersion: newVersion })
+      .where(and(eq(users.id, id), eq(users.sessionVersion, expectedVersion)))
+      .returning({ sessionVersion: users.sessionVersion });
+
+    return rows[0]?.sessionVersion ?? null;
+  }
+
+  async restorePasswordAndVersion(
+    id: string,
+    oldPasswordHash: string,
+    issuedVersion: number,
+  ): Promise<void> {
+    await this.transaction
+      .update(users)
+      .set({
+        passwordHash: oldPasswordHash,
+        sessionVersion: issuedVersion - 1,
+      })
+      .where(and(eq(users.id, id), eq(users.sessionVersion, issuedVersion)));
+  }
 }
 
 type UserRow = typeof users.$inferSelect;

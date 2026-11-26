@@ -49,6 +49,7 @@ Probes after `infra:up`:
 | `curl http://localhost:5173/auth/sign-in`                   | Public sign-in form                                |
 | `curl http://localhost:5173/auth/confirm-account`           | Public confirmation page; no token consumed by GET |
 | `curl http://localhost:5173/auth/forgot-password`           | Public reset-request form                          |
+| `curl http://localhost:5173/auth/reset-password`            | Public reset form; no token consumed by GET        |
 | `curl http://localhost:5173/app/home`                       | Unguarded placeholder page                         |
 | `curl http://localhost:3100/ready`                          | Loki ready                                         |
 | `curl http://localhost:3200/ready`                          | Tempo `ready`                                      |
@@ -110,6 +111,19 @@ After `npm run infra:up`, `npm run db:migrate` and a confirmed account (sign up 
 6. After more than 60 seconds, submit again — one new email/row and the previous unconsumed row now has non-null `used_at`. Force `EmailService` to throw — the new row is gone, the error is logged without the raw token or email, and the response is still the identical 202.
 7. Run `npm run db:migrate` a second time and re-check `GET /`, `/`, sign-up, sign-in, confirmation and `/auth/me`; earlier contracts and the migrated table remain intact.
 8. Optional real-SQL probe: `RUN_DB_PROBE=1 npm run test -w api` exercises row selection, invalidation, removal, the partial unique index and the account row lock against local Postgres; it is skipped when the env var is absent.
+
+### Reset-password checks
+
+After `npm run infra:up`, `npm run db:migrate` and a confirmed account with a fresh reset link from the forgot-password checks above:
+
+1. Open the emailed `{APP_URL}/auth/reset-password?token={TOKEN}` link — two labelled password fields in keyboard order, visible focus, a "Use at least 8 characters." hint, responsive light theme and no dark mode. Submit a short value and a mismatched pair — en-US `role="alert"` errors, no POST for the local validation, and no account changes.
+2. Sign in first so `localStorage.auth_token` exists, then submit a valid pair — the button reads "Resetting password…" while in flight, the 200 body is exactly `{"message":"Your password has been reset."}` with no token or password, `auth_token` is removed and the browser lands on `/auth/sign-in`. Sign in with the new password and confirm the old password no longer works.
+3. Inspect `users` and `password_reset_tokens`: `password_hash` verifies the new password and not the old one, `used_at` is non-null with an unchanged `token_hash`, and `session_version` increased by exactly one. Call `GET /api/v1/auth/me` with the pre-reset JWT — 401 with no account data; the new JWT returns 200.
+4. Read the console fallback (or Mailtrap) — one "Your password has been reset" email with the UTC time and "If this wasn't you, reset it again immediately.", no token-bearing link and no other language.
+5. Replay the link and POST an expired and an unknown token — all return the same 410 `"This password reset link is invalid or has expired."` with no second hash change, version increment or email. Open the page without `token` — the same message with a `/auth/forgot-password` link and no form. Submit a 400 shape (short password, mismatch, extra field) — an en-US message and no changes.
+6. Force `EmailService` to throw for a fresh token — the previous `password_hash`, null `used_at` and `session_version` are restored, the response is a generic 502 with no success email, and the same link works when the provider recovers.
+7. Confirm no raw token or plaintext password appears in responses or logs, run `npm run db:migrate` again, and re-check `GET /`, `/`, sign-up, sign-in, confirmation, forgot-password and `/auth/me`; earlier contracts remain intact.
+8. Optional real-SQL probe: `RUN_DB_PROBE=1 npm run test -w api` now also exercises conditional token claim/release and guarded password/version write/restore against local Postgres; it is skipped when the env var is absent.
 
 ## Hook checks
 
