@@ -99,6 +99,33 @@ class MemoryAccountRepository extends AccountRepository {
       row.sessionVersion = issuedVersion - 1;
     }
   }
+
+  async setPasswordAndIncrementVersionIfVersion(
+    id: string,
+    passwordHash: string,
+    expectedVersion: number,
+    newVersion: number,
+  ): Promise<number | null> {
+    const row = this.rows.find((entry) => entry.id === id);
+    if (row === undefined || row.sessionVersion !== expectedVersion) {
+      return null;
+    }
+    row.passwordHash = passwordHash;
+    row.sessionVersion = newVersion;
+    return newVersion;
+  }
+
+  async restorePasswordAndVersion(
+    id: string,
+    oldPasswordHash: string,
+    issuedVersion: number,
+  ): Promise<void> {
+    const row = this.rows.find((entry) => entry.id === id);
+    if (row !== undefined && row.sessionVersion === issuedVersion) {
+      row.passwordHash = oldPasswordHash;
+      row.sessionVersion = issuedVersion - 1;
+    }
+  }
 }
 
 class MemoryConfirmationTokenRepository extends ConfirmationTokenRepository {
@@ -157,6 +184,17 @@ class NoopPasswordResetTokenRepository extends PasswordResetTokenRepository {
   }
 
   async removeById(_id: string): Promise<void> {
+    return undefined;
+  }
+
+  async claimByHash(
+    _tokenHash: string,
+    _now: Date,
+  ): Promise<TokenClaim | null> {
+    return null;
+  }
+
+  async releaseClaim(_tokenHash: string, _claimedUsedAt: Date): Promise<void> {
     return undefined;
   }
 }

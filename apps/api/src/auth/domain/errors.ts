@@ -46,3 +46,17 @@ export class SessionNotificationError extends Error {
     this.name = "SessionNotificationError";
   }
 }
+
+export class InvalidPasswordResetTokenError extends Error {
+  constructor() {
+    super("This password reset link is invalid or has expired.");
+    this.name = "InvalidPasswordResetTokenError";
+  }
+}
+
+export class PasswordResetNotificationError extends Error {
+  constructor() {
+    super("Unable to reset your password. Please try again.");
+    this.name = "PasswordResetNotificationError";
+  }
+}

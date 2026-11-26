@@ -139,5 +139,67 @@ describe.skipIf(!RUN_DB_PROBE)(
         await accounts.findByEmailForUpdate("nobody@example.com"),
       ).toBeNull();
     });
+
+    it("claims an unconsumed unexpired token once and releases it conditionally", async () => {
+      const userId = await seedUser();
+      const now = new Date();
+      const tokenHash = randomUUID();
+      await tokens.create({ ...tokenInput(userId, now), tokenHash });
+
+      expect(await tokens.claimByHash(randomUUID(), now)).toBeNull();
+      const claim = await tokens.claimByHash(tokenHash, now);
+      expect(claim?.userId).toBe(userId);
+      expect(await tokens.claimByHash(tokenHash, now)).toBeNull();
+
+      await tokens.releaseClaim(tokenHash, claim!.usedAt);
+      expect((await tokens.claimByHash(tokenHash, now))?.userId).toBe(userId);
+      await tokens.claimByHash(tokenHash, now);
+
+      const expiredHash = randomUUID();
+      await tokens.create({
+        ...tokenInput(userId, new Date(now.getTime() - 2 * 60 * 60 * 1000)),
+        tokenHash: expiredHash,
+      });
+      expect(await tokens.claimByHash(expiredHash, now)).toBeNull();
+    });
+
+    it("guards password/version writes and restores them conditionally", async () => {
+      const userId = await seedUser();
+      expect((await accounts.findById(userId))?.sessionVersion).toBe(0);
+      expect(
+        await accounts.setPasswordAndIncrementVersionIfVersion(
+          userId,
+          "new-hash",
+          1,
+          2,
+        ),
+      ).toBeNull();
+
+      expect(
+        await accounts.setPasswordAndIncrementVersionIfVersion(
+          userId,
+          "new-hash",
+          0,
+          1,
+        ),
+      ).toBe(1);
+      expect((await accounts.findById(userId))?.passwordHash).toBe("new-hash");
+
+      await accounts.restorePasswordAndVersion(userId, "old-hash", 1);
+      const restored = await accounts.findById(userId);
+      expect(restored?.passwordHash).toBe("old-hash");
+      expect(restored?.sessionVersion).toBe(0);
+
+      await accounts.setPasswordAndIncrementVersionIfVersion(
+        userId,
+        "newer-hash",
+        0,
+        1,
+      );
+      await accounts.restorePasswordAndVersion(userId, "old-hash", 0);
+      expect((await accounts.findById(userId))?.passwordHash).toBe(
+        "newer-hash",
+      );
+    });
   },
 );

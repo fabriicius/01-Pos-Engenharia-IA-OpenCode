@@ -74,6 +74,17 @@ describe("application routes", () => {
     ).toBeTruthy();
   });
 
+  it("renders the public reset-password page at /auth/reset-password", () => {
+    renderAt("/auth/reset-password?token=valid-token");
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Reset password" }),
+    ).toBeTruthy();
+    expect(screen.getByLabelText("New password")).toBeTruthy();
+    expect(screen.getByLabelText("Confirm password")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Reset password" })).toBeTruthy();
+  });
+
   it("renders the unguarded placeholder at /app/home", () => {
     renderAt("/app/home");
 

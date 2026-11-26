@@ -3,6 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import { ConfirmAccountUseCase } from "./application/confirm-account.use-case";
 import { ForgotPasswordUseCase } from "./application/forgot-password.use-case";
 import { GetCurrentSessionUseCase } from "./application/get-current-session.use-case";
+import { ResetPasswordUseCase } from "./application/reset-password.use-case";
 import { SignInUseCase } from "./application/sign-in.use-case";
 import { SignUpUseCase } from "./application/sign-up.use-case";
 import { AccessTokenService } from "./domain/access-token";
@@ -16,6 +17,7 @@ import { DrizzleUnitOfWork } from "./infrastructure/unit-of-work";
 import { AuthController } from "./interface/auth.controller";
 import { ConfirmAccountController } from "./interface/confirm-account.controller";
 import { ForgotPasswordController } from "./interface/forgot-password.controller";
+import { ResetPasswordController } from "./interface/reset-password.controller";
 import { SessionGuard } from "./interface/session.guard";
 import { SignInController } from "./interface/sign-in.controller";
 
@@ -25,12 +27,14 @@ import { SignInController } from "./interface/sign-in.controller";
     SignInController,
     ConfirmAccountController,
     ForgotPasswordController,
+    ResetPasswordController,
   ],
   providers: [
     SignUpUseCase,
     SignInUseCase,
     ConfirmAccountUseCase,
     ForgotPasswordUseCase,
+    ResetPasswordUseCase,
     GetCurrentSessionUseCase,
     SessionGuard,
     DatabaseClient,

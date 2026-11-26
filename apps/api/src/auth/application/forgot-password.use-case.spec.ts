@@ -79,6 +79,23 @@ class MemoryAccountRepository extends AccountRepository {
   ): Promise<void> {
     return undefined;
   }
+
+  async setPasswordAndIncrementVersionIfVersion(
+    _id: string,
+    _passwordHash: string,
+    _expectedVersion: number,
+    _newVersion: number,
+  ): Promise<number | null> {
+    return null;
+  }
+
+  async restorePasswordAndVersion(
+    _id: string,
+    _oldPasswordHash: string,
+    _issuedVersion: number,
+  ): Promise<void> {
+    return undefined;
+  }
 }
 
 class NoopConfirmationTokenRepository extends ConfirmationTokenRepository {
@@ -128,6 +145,17 @@ class MemoryPasswordResetTokenRepository extends PasswordResetTokenRepository {
 
   async removeById(id: string): Promise<void> {
     this.rows = this.rows.filter((row) => row.id !== id);
+  }
+
+  async claimByHash(
+    _tokenHash: string,
+    _now: Date,
+  ): Promise<TokenClaim | null> {
+    return null;
+  }
+
+  async releaseClaim(_tokenHash: string, _claimedUsedAt: Date): Promise<void> {
+    return undefined;
   }
 }
 
