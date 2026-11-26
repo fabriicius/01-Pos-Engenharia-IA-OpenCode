@@ -127,7 +127,7 @@ Not applicable — the client renders one static heading with no asynchronous da
 
 - [ ] AC-1 — Given `apps/api` is implemented, when a developer starts it and sends `GET /` on port 3000, then the response is HTTP 200 with `Content-Type: application/json` and body `{"message":"Hello World"}`.
 - [ ] AC-2 — Given the API is running, when `GET /does-not-exist` is requested, then the service returns a JSON 404 and stays up.
-- [ ] AC-3 — Given `apps/app` is running on port 5173, when a browser opens `/`, then the page contains a single `<h1>Hello World</h1>` and the document title is "Hello World".
+- [ ] AC-3 — Given `apps/app` is running on port 5173, when a browser opens `/`, then the page contains a single `<h1>Hello World</h1>` and the document title is "Hello World". **Superseded for the client root by ADR 0006:** `/` now redirects to `/auth/sign-in`; the API `GET /` hello-world contract is unchanged.
 - [ ] AC-4 — Given a clean checkout on Node v22.22.1 with `engines.node` set to `>=22`, when `npm install` runs, then installation completes with `api`, `app` and the three `@repo/*` packages present as workspaces and no engine-version error.
 - [ ] AC-5 — Given the monorepo is installed, when `npm run lint` is executed, then it exits 0 with no lint errors in any workspace.
 - [ ] AC-6 — Given a deliberately misformatted source file, when `npm run code:fix` is executed, then the file is rewritten to satisfy lint/Prettier and a subsequent `npm run lint` exits 0.

@@ -43,7 +43,7 @@ npm run infra:down   # supabase stop && docker compose down (preserves volumes)
 npm run db:migrate   # drizzle-kit migrate
 ```
 
-`code:fix` is registered with `"cache": false` in `turbo.json` because it mutates source files. `types:check` and `check-types` run the same workspace checks.
+`code:fix` is registered with `"cache": false` in `turbo.json` because it mutates source files. `types:check` and `check-types` run the same workspace checks. `apps/api` dev runs `node dev.mjs`, which compiles with `tsc --watch` and restarts the built app with `node --watch-path=dist`; this preserves `emitDecoratorMetadata` for Nest DI and DTO validation (D-16 in `.adrs/0001-foundation.md`).
 
 ### Current tooling
 
@@ -68,16 +68,16 @@ npm run db:migrate   # drizzle-kit migrate
 
 ### Local services and ports
 
-| Service             | Port  | Notes                                                                                                                                     |
-| ------------------- | ----- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| API (`apps/api`)    | 3000  | `GET /` → `{"message":"Hello World"}`; `/api/v1/auth/sign-up`, `sign-in`, `confirm-account`, `forgot-password`, `me`                      |
-| Client (`apps/app`) | 5173  | `/` → `<h1>Hello World</h1>`; `/auth/sign-up`; `/auth/sign-in`; `/auth/confirm-account`; `/auth/forgot-password`; `/app/home` (unguarded) |
-| Grafana             | 3002  | Loki (default), Tempo, Mimir datasources provisioned                                                                                      |
-| Loki                | 3100  | Logs                                                                                                                                      |
-| Tempo               | 3200  | Traces                                                                                                                                    |
-| Supabase Studio     | 54323 | Local dashboard                                                                                                                           |
-| Supabase Postgres   | 54322 | `DATABASE_URL` target for `db:migrate`                                                                                                    |
-| Mimir               | 9009  | Metrics                                                                                                                                   |
+| Service             | Port  | Notes                                                                                                                                           |
+| ------------------- | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| API (`apps/api`)    | 3000  | `GET /` → `{"message":"Hello World"}`; `/api/v1/auth/sign-up`, `sign-in`, `confirm-account`, `forgot-password`, `me`                            |
+| Client (`apps/app`) | 5173  | `/` → redirects to `/auth/sign-in`; `/auth/sign-up`; `/auth/sign-in`; `/auth/confirm-account`; `/auth/forgot-password`; `/app/home` (unguarded) |
+| Grafana             | 3002  | Loki (default), Tempo, Mimir datasources provisioned                                                                                            |
+| Loki                | 3100  | Logs                                                                                                                                            |
+| Tempo               | 3200  | Traces                                                                                                                                          |
+| Supabase Studio     | 54323 | Local dashboard                                                                                                                                 |
+| Supabase Postgres   | 54322 | `DATABASE_URL` target for `db:migrate`                                                                                                          |
+| Mimir               | 9009  | Metrics                                                                                                                                         |
 
 Local defaults live in `.env.example`; copy it to `.env` before starting the stack. These credentials are development-only.
 

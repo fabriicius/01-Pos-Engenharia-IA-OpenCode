@@ -18,13 +18,14 @@ afterEach(() => {
 });
 
 describe("application routes", () => {
-  it("renders exactly one level-one heading at /", () => {
+  it("redirects / to the sign-in page", () => {
     renderAt("/");
 
-    const headings = screen.getAllByRole("heading", { level: 1 });
-
-    expect(headings).toHaveLength(1);
-    expect(headings[0]?.textContent).toBe("Hello World");
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Sign in" }),
+    ).toBeTruthy();
+    expect(screen.getByLabelText("Email")).toBeTruthy();
+    expect(screen.getByLabelText("Password")).toBeTruthy();
   });
 
   it("renders the public sign-up page at /auth/sign-up", () => {

@@ -40,24 +40,24 @@ npm run infra:down    # supabase stop && docker compose down (volumes preserved)
 
 Probes after `infra:up`:
 
-| Check                                                       | Expected                                              |
-| ----------------------------------------------------------- | ----------------------------------------------------- |
-| `curl http://localhost:3000/`                               | `200 application/json` `{"message":"Hello World"}`    |
-| `curl http://localhost:3000/api/v1/does-not-exist`          | JSON `404`, API still up                              |
-| `curl http://localhost:5173/`                               | Page with `<h1>Hello World</h1>`, title "Hello World" |
-| `curl http://localhost:5173/auth/sign-up`                   | Public sign-up form                                   |
-| `curl http://localhost:5173/auth/sign-in`                   | Public sign-in form                                   |
-| `curl http://localhost:5173/auth/confirm-account`           | Public confirmation page; no token consumed by GET    |
-| `curl http://localhost:5173/auth/forgot-password`           | Public reset-request form                             |
-| `curl http://localhost:5173/app/home`                       | Unguarded placeholder page                            |
-| `curl http://localhost:3100/ready`                          | Loki ready                                            |
-| `curl http://localhost:3200/ready`                          | Tempo `ready`                                         |
-| `curl http://localhost:9009/ready`                          | Mimir `ready`                                         |
-| `curl -u admin:admin http://localhost:3002/api/health`      | Grafana database `ok`                                 |
-| `curl -u admin:admin http://localhost:3002/api/datasources` | Loki, Tempo, Mimir present                            |
-| `npx supabase status`                                       | Studio 54323, Postgres 54322                          |
-| `docker compose ps`                                         | Four LGTM containers running                          |
-| `docker volume ls` after `infra:down`                       | LGTM and Supabase volumes still present               |
+| Check                                                       | Expected                                           |
+| ----------------------------------------------------------- | -------------------------------------------------- |
+| `curl http://localhost:3000/`                               | `200 application/json` `{"message":"Hello World"}` |
+| `curl http://localhost:3000/api/v1/does-not-exist`          | JSON `404`, API still up                           |
+| `curl http://localhost:5173/`                               | SPA shell; browser redirects to `/auth/sign-in`    |
+| `curl http://localhost:5173/auth/sign-up`                   | Public sign-up form                                |
+| `curl http://localhost:5173/auth/sign-in`                   | Public sign-in form                                |
+| `curl http://localhost:5173/auth/confirm-account`           | Public confirmation page; no token consumed by GET |
+| `curl http://localhost:5173/auth/forgot-password`           | Public reset-request form                          |
+| `curl http://localhost:5173/app/home`                       | Unguarded placeholder page                         |
+| `curl http://localhost:3100/ready`                          | Loki ready                                         |
+| `curl http://localhost:3200/ready`                          | Tempo `ready`                                      |
+| `curl http://localhost:9009/ready`                          | Mimir `ready`                                      |
+| `curl -u admin:admin http://localhost:3002/api/health`      | Grafana database `ok`                              |
+| `curl -u admin:admin http://localhost:3002/api/datasources` | Loki, Tempo, Mimir present                         |
+| `npx supabase status`                                       | Studio 54323, Postgres 54322                       |
+| `docker compose ps`                                         | Four LGTM containers running                       |
+| `docker volume ls` after `infra:down`                       | LGTM and Supabase volumes still present            |
 
 ### Sign-up checks
 
@@ -70,7 +70,7 @@ After `npm run infra:up` and `npm run db:migrate` (with `npm run dev` running):
 5. Inspect `users` and `account_confirmation_tokens` — lowercased email, bcrypt hash, status `pending`, token hash only, `used_at` null and `expires_at` about 24 hours after creation.
 6. Repeat the same email in a different letter case — HTTP 409, no second account and no second email. The emailed link is consumed by the confirmation checks below (implemented in `003-confirm-account`).
 7. Stop the email provider with credentials still configured — HTTP 502 and no leftover `pending` account.
-8. Open `/` and `/app/home` — both still render the hello-world heading; `/` keeps `GET /` → `{"message":"Hello World"}`.
+8. Open `/` — it redirects to `/auth/sign-in`; open `/app/home` — it still renders the hello-world placeholder; `GET /` on the API keeps `{"message":"Hello World"}`.
 
 ### Confirmation checks
 

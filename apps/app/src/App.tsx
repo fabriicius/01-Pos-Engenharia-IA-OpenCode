@@ -1,16 +1,8 @@
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import { ConfirmAccountPage } from "./auth/confirm-account/ConfirmAccountPage";
 import { ForgotPasswordPage } from "./auth/forgot-password/ForgotPasswordPage";
 import { SignInPage } from "./auth/sign-in/SignInPage";
 import { SignUpPage } from "./auth/sign-up/SignUpPage";
-
-function HelloWorldPage() {
-  return (
-    <main className="hello-world">
-      <h1>Hello World</h1>
-    </main>
-  );
-}
 
 function AppHomePage() {
   return (
@@ -24,7 +16,7 @@ function AppHomePage() {
 export function App() {
   return (
     <Routes>
-      <Route path="/" element={<HelloWorldPage />} />
+      <Route path="/" element={<Navigate to="/auth/sign-in" replace />} />
       <Route path="/auth/sign-up" element={<SignUpPage />} />
       <Route path="/auth/sign-in" element={<SignInPage />} />
       <Route path="/auth/confirm-account" element={<ConfirmAccountPage />} />

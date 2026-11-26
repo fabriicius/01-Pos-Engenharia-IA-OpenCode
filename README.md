@@ -26,7 +26,7 @@ cp .env.example .env        # local-only defaults; never reuse in production
 
 npm run dev                 # API on :3000, client on :5173
 curl http://localhost:3000/ # {"message":"Hello World"}
-# open http://localhost:5173/ → <h1>Hello World</h1>, title "Hello World"
+# open http://localhost:5173/ → redirects to /auth/sign-in (sign-in form)
 # open http://localhost:5173/auth/sign-up → public sign-up form
 # open http://localhost:5173/auth/sign-in → public sign-in form
 # open the emailed /auth/confirm-account?token={TOKEN} link → confirms the account
@@ -43,7 +43,7 @@ curl http://localhost:3000/ # {"message":"Hello World"}
 - `POST /api/v1/auth/forgot-password` accepts `{ email }` and always returns the same en-US 202 message for any well-formed address. Only an `active` account gets a "Reset your password" email with a one-hour `{APP_URL}/auth/reset-password?token={TOKEN}` link, stored as a SHA-256 hash in `password_reset_tokens`. A silent 60-second cooldown suppresses repeats and a new request invalidates the previous unconsumed token. Unknown emails, `pending` accounts, throttled repeats and failed email dispatch are indistinguishable in the response; a failed dispatch deletes the new token and logs the error (ADR 0005). Token consumption, the reset page and the password change belong to `005-reset-password`.
 - A session is an HS256 JWT signed with `JWT_SECRET`, carrying `sub` and a `ver` claim matched against `users.session_version`. The version is incremented atomically on every session creation (sign-in and account confirmation), so the last login wins. `GET /api/v1/auth/me` with `Authorization: Bearer {token}` returns non-sensitive account data or 401 for stale, expired, tampered or missing tokens. Email failure restores the previous version and withholds the token.
 - The client stores the token in `localStorage` under `auth_token`, adds the Bearer header through `apiFetch`, and removes it on any 401. The tradeoff and mitigations are documented in ADR 0003.
-- `/auth/*` is public; `/app/home` is an unguarded placeholder until route protection arrives in a later spec. A lost or expired confirmation link is a dead end for confirmation by design — sign up again to receive a duplicate-email 409 rather than a resend. Password recovery can be requested at `/auth/forgot-password`, but no reset page or password change is available until `005-reset-password`.
+- `/` redirects to `/auth/sign-in`; `/auth/*` is public; `/app/home` is an unguarded placeholder until route protection arrives in a later spec. A lost or expired confirmation link is a dead end for confirmation by design — sign up again to receive a duplicate-email 409 rather than a resend. Password recovery can be requested at `/auth/forgot-password`, but no reset page or password change is available until `005-reset-password`.
 
 ## Quality commands
 

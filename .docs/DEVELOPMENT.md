@@ -12,12 +12,13 @@
 ## Current repository practices
 
 - Monorepo managed by npm workspaces + Turborepo; Node `>=22`.
-- Apps: `apps/api` (NestJS API on port 3000: `GET /` hello world plus versioned sign-up/sign-in/confirm-account/forgot-password/`me` endpoints) and `apps/app` (React + Vite client on port 5173: `/`, `/auth/sign-up`, `/auth/sign-in`, `/auth/confirm-account`, `/auth/forgot-password` and `/app/home`).
+- Apps: `apps/api` (NestJS API on port 3000: `GET /` hello world plus versioned sign-up/sign-in/confirm-account/forgot-password/`me` endpoints) and `apps/app` (React + Vite client on port 5173: `/` redirects to `/auth/sign-in`, plus `/auth/sign-up`, `/auth/sign-in`, `/auth/confirm-account`, `/auth/forgot-password` and `/app/home`).
 - Shared packages: `@repo/ui`, `@repo/eslint-config`, `@repo/typescript-config`.
 - Lint with ESLint 10 and format with Prettier; `npm run code:fix` runs both with `--fix`/write. OXLint/OXFmt are not used (ADR 0001). For TypeScript files, ESLint's `no-undef` rule is disabled because `check-types` resolves identifiers and globals more accurately than the Babel parser (ADR 0002).
 - Type-check with TypeScript through `npm run check-types` or its alias `npm run types:check`.
 - Test with Vitest (`npm run test`); the API uses Supertest against `AppModule` plus use-case unit tests with in-memory ports, the client uses React Testing Library in jsdom.
 - Local infra: `npm run infra:up` (Supabase + LGTM), `npm run db:migrate`, `npm run infra:down`. Copy `.env.example` to `.env` first.
+- API dev uses `tsc --watch` + `node --watch-path=dist` via `apps/api/dev.mjs`; do not replace it with `tsx`, which drops the decorator metadata Nest needs for DI and DTO validation (D-16).
 - Hooks: Lefthook runs lint-staged on `pre-commit` and Commitlint on `commit-msg`; use Conventional Commits.
 - Before declaring work done, run applicable checks from `QA.md`.
 

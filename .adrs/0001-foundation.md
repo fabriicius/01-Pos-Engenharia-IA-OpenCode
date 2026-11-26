@@ -3,7 +3,7 @@
 - **Status:** accepted
 - **Date:** 2026-11-23
 - **Spec:** `specs/000-foundation.md`
-- **Decisions recorded:** D-1, D-2 (with context for D-4, D-7, D-13)
+- **Decisions recorded:** D-1, D-2 (with context for D-4, D-7, D-13, D-16)
 
 ## Context
 
@@ -34,12 +34,13 @@ Two decisions are architectural and therefore require an ADR under `.docs/RULES.
 - **D-4:** `engines.node` is `>=22`, matching the verified local Node `v22.22.1`.
 - **D-7:** the Supabase CLI is a pinned root devDependency wrapped by `infra:up`/`infra:down`; `down` runs `supabase stop && docker compose down` **without** `-v` so local volumes are preserved.
 - **D-13:** Next.js-only dependencies (`next`, `@next/eslint-plugin-next`) and the `./next-js` export of `@repo/eslint-config` stay installed and configured but unused. This is an explicit user decision that overrides the original "remove unused libraries" item; revisit only when a concrete cost appears.
+- **D-16:** `apps/api` dev runs `node dev.mjs`, which compiles with `tsc --watch` and restarts `node --watch-path=dist dist/main.js`. `tsx`/esbuild was replaced because it does not emit `emitDecoratorMetadata`, leaving Nest providers undefined and disabling DTO validation in dev. Rejected alternatives: adding `@Inject()` to every constructor and `expectedType` to every `@Body()` (patches symptoms and bypasses the shared compiler config), or installing the Nest CLI (incompatible with TypeScript 7.0.2).
 
 ## Consequences
 
 - Positive: `apps/*` matches the documented target; every quality command has one deterministic implementation; local infra and migration commands are reproducible and idempotent.
 - Positive: linting actually parses TypeScript, TSX and Nest decorators (the initial flat configs silently ignored these files; the fix is part of this decision).
-- Negative: TypeScript 7.0.2 cannot run the Nest CLI, so `apps/api` builds with `tsc -p tsconfig.build.json` and runs in dev with `tsx watch src/main.ts` instead of `nest build`/`nest start`.
+- Negative: TypeScript 7.0.2 cannot run the Nest CLI, so `apps/api` builds with `tsc -p tsconfig.build.json` and runs in dev via `apps/api/dev.mjs` (`tsc --watch` + `node --watch-path=dist`) instead of `nest build`/`nest start`.
 - Follow-ups deferred to later specs: Playwright E2E, CI workflow, Nest domain layers, design tokens/shadcn, and a future decision on removing the dormant Next.js dependencies.
 
 ## Verification
