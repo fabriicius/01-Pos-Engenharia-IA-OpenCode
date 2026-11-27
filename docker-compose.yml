@@ -30,6 +30,32 @@ services:
       - mimir-data:/var/mimir
     restart: unless-stopped
 
+  alloy:
+    image: grafana/alloy:v1.11.3
+    command:
+      [
+        "run",
+        "--server.http.listen-addr=0.0.0.0:12345",
+        "--storage.path=/var/lib/alloy/data",
+        "/etc/alloy/config.alloy",
+      ]
+    ports:
+      - "127.0.0.1:4318:4318"
+      - "127.0.0.1:12345:12345"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      API_ENVIRONMENT: ${NODE_ENV:-development}
+      API_INSTANCE: ${OTEL_SERVICE_INSTANCE_ID:-local-api}
+    volumes:
+      - ./monitoring/alloy.alloy:/etc/alloy/config.alloy:ro
+      - alloy-data:/var/lib/alloy/data
+    depends_on:
+      - loki
+      - tempo
+      - mimir
+    restart: unless-stopped
+
   grafana:
     image: grafana/grafana:12.2.0
     ports:
@@ -39,6 +65,7 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: admin
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
       - grafana-data:/var/lib/grafana
     depends_on:
       - loki
@@ -47,6 +74,7 @@ services:
     restart: unless-stopped
 
 volumes:
+  alloy-data:
   loki-data:
   tempo-data:
   mimir-data:

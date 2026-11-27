@@ -18,7 +18,7 @@ The starter `apps/web` and `apps/docs` apps were removed by the foundation spec.
 
 ## Quickstart
 
-Requires Node `>=22` (verified on `v22.22.1`), npm `9.2.0`, and Docker with Compose v5 for local infrastructure.
+Requires Node `22.15+` on the 22.x line, 24.x, or 26+ (verified on `v22.22.1`), npm `9.2.0`, and Docker with Compose v5 for local infrastructure.
 
 ```sh
 npm install                 # also installs Lefthook hooks via prepare
@@ -81,6 +81,23 @@ npm run infra:down          # supabase stop && docker compose down; volumes pres
 
 Configuration lives in `supabase/config.toml`, `docker-compose.yml`, `monitoring/`, `grafana/provisioning/`, `drizzle.config.ts` and `drizzle/`. `.env.example` carries development-only defaults; do not use them in production.
 
+### Grafana MCP
+
+Each developer uses a service account token from their own local Grafana instance. Open <http://localhost:3002>, go to **Administration → Users and access → Service accounts**, create a service account with the **Viewer** role, and generate a token. Add these values to your local `.env` (ignored by Git):
+
+```dotenv
+GRAFANA_URL=http://localhost:3002
+GRAFANA_SERVICE_ACCOUNT_TOKEN=<your-local-service-account-token>
+```
+
+With `uvx` installed, run this command from the repository root to register the server in Codex:
+
+```sh
+codex mcp add grafana -- uvx --env-file "$PWD/.env" mcp-grafana@2.2.0 --disable-write
+```
+
+`uvx` loads the local `.env` whenever the MCP server starts. The token is not stored in the Codex configuration. Restart the Grafana MCP server after changing `.env`. This setup enables read access to dashboards, Loki logs, Mimir metrics, and Tempo traces. For other MCP clients, use the same command and arguments, replacing `$PWD/.env` with the absolute path to your checkout's `.env`.
+
 ## Commits
 
 Lefthook runs `lint-staged` on `pre-commit` and `commitlint` on `commit-msg`. Use Conventional Commits, for example `feat: add foundation`.
@@ -90,3 +107,16 @@ From OpenCode, run `/commit-and-push` at the end of every spec execution. It ana
 ## Turborepo utilities
 
 Tasks are configured in `turbo.json`. Run a task for one workspace with npm filters, for example `npm run build -w app` or `npm run test -w api`. Remote caching is not configured; caching is local by default. Useful references: [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks), [Caching](https://turborepo.dev/docs/crafting-your-repository/caching), [Configuration](https://turborepo.dev/docs/reference/configuration).
+
+## API observability
+
+Start the API and `docker compose up -d` to collect real metrics, safe operational logs and request/dependency traces. Open [API Observability](http://localhost:3002/d/fabricius-api-observability) in Grafana's Observability folder. The versioned dashboard has 39 content panels across health, endpoints, authentication, PostgreSQL, email, runtime and investigation; seven Grafana-managed rules evaluate every minute.
+
+```sh
+npm run observability:verify       # query every panel and check live provisioning/evaluation
+npm run observability:test-alerts  # isolated promtool fixtures; requires Docker
+```
+
+The API exposes internal Prometheus metrics at `:9464/metrics`; Alloy receives OTLP at `127.0.0.1:4318`, scrapes every 15 seconds and forwards to the existing LGTM stack. Mimir writes/reads use tenant `fabricius`. Allow two or more scrapes before interpreting rates; empty histories are not evidence of health. External alert notification delivery is intentionally unconfigured.
+
+See [the operating guide](.docs/OBSERVABILITY.md), [ADR 0008](.adrs/0008-api-observability.md), [spec 007](specs/007-api-observability.md) and [its implementation plan](.plans/007-api-observability-plan.md) for metric meanings, settings, verification, limitations and rollback.

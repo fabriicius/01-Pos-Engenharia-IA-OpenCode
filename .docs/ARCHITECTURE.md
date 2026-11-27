@@ -10,7 +10,7 @@
 - **Package manager**: npm workspaces (`package-lock.json`, `workspaces: ["apps/*", "packages/*"]`)
 - **Task orchestration**: Turborepo (`turbo.json`)
 - **Language**: TypeScript across apps and packages
-- **Node**: `>=22` (verified on `v22.22.1`; see root `package.json`)
+- **Node**: `^22.15.0 || ^24.0.0 || >=26.0.0` (verified on `v22.22.1`; see root `package.json`)
 
 ### Workspaces
 
@@ -41,6 +41,8 @@ npm run format       # prettier --write "**/*.{ts,tsx,md}"
 npm run infra:up     # supabase start && docker compose up -d
 npm run infra:down   # supabase stop && docker compose down (preserves volumes)
 npm run db:migrate   # drizzle-kit migrate
+npm run observability:verify       # live dashboard queries / provisioning / rule health
+npm run observability:test-alerts  # isolated rule fixtures in Docker
 ```
 
 `code:fix` is registered with `"cache": false` in `turbo.json` because it mutates source files. `types:check` and `check-types` run the same workspace checks. `apps/api` dev runs `node dev.mjs`, which compiles with `tsc --watch` and restarts the built app with `node --watch-path=dist`; this preserves `emitDecoratorMetadata` for Nest DI and DTO validation (D-16 in `.adrs/0001-foundation.md`).
@@ -61,7 +63,7 @@ npm run db:migrate   # drizzle-kit migrate
 | Nodemailer         | Mailtrap SMTP adapter                                | [current] |
 | Supabase CLI       | Pinned devDependency; local Postgres                 | [current] |
 | Drizzle Kit/ORM    | Migration application and schema tooling             | [current] |
-| Docker Compose     | Loki, Grafana, Tempo, Mimir (LGTM)                   | [current] |
+| Docker Compose     | Loki, Grafana, Tempo, Mimir (LGTM) and Alloy         | [current] |
 | Lefthook           | Local `pre-commit` / `commit-msg` hooks              | [current] |
 | lint-staged        | Format/lint staged files on commit                   | [current] |
 | Commitlint         | Conventional Commits enforcement                     | [current] |
@@ -105,7 +107,6 @@ These items remain product/engineering direction, not current implementation. Do
 | ---------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
 | Backend layering | `interface` / `application` / `domain` / `infrastructure` in `apps/api` | Implemented for the auth slice; other capabilities can follow the same pattern |
 | Testing          | Playwright E2E in addition to Vitest/Supertest                          | Smoke coverage exists; browser E2E is deferred                                 |
-| Observability    | Application log/trace/metric instrumentation                            | LGTM containers and datasources exist; no app instrumentation yet              |
 | Deployment       | Vercel                                                                  | App/API deployment target                                                      |
 | Design system    | Tokens/shadcn-ui                                                        | Deliberately not introduced in the foundation                                  |
 
@@ -116,3 +117,9 @@ ESLint + Prettier are the chosen lint/format stack (ADR 0001); OXLint/OXFmt were
 - Prefer inspecting actual files/config before relying on documentation.
 - When implementing target architecture, update this file in the same change.
 - Keep workspace/package names aligned with `package.json` and `turbo.json`.
+
+## API observability (current)
+
+`apps/api/src/observability/` owns an isolated Prometheus registry, manual OpenTelemetry spans and allowlisted structured events. HTTP instrumentation covers guards, validation, unmatched paths and aborted responses. Infrastructure wrappers observe pg query spans, whole transactions, readiness/pool state and email acceptance/failure/console outcomes without domain coupling. Startup binds metrics on `:9464`; tests construct the app without binding exporter ports.
+
+Pinned Alloy scrapes metrics over Docker host-gateway and forwards metrics to Mimir with tenant `fabricius`, typed events to Loki and traces to Tempo. No stdout/Docker socket collection or broad library auto-instrumentation is enabled. Dashboard, datasource correlation and seven evaluated rules are provisioned from `grafana/`; stable existing datasource UIDs are preserved. See [OBSERVABILITY.md](OBSERVABILITY.md) and [ADR 0008](../.adrs/0008-api-observability.md).

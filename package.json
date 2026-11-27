@@ -13,7 +13,9 @@
     "infra:up": "supabase start && docker compose up -d",
     "infra:down": "supabase stop && docker compose down",
     "db:migrate": "drizzle-kit migrate",
-    "prepare": "lefthook install"
+    "prepare": "lefthook install",
+    "observability:verify": "node --env-file-if-exists=.env monitoring/verify-observability.mjs",
+    "observability:test-alerts": "node monitoring/test-alerts.mjs"
   },
   "devDependencies": {
     "@babel/plugin-syntax-decorators": "8.0.1",
@@ -32,7 +34,8 @@
     "supertest": "7.3.2",
     "turbo": "^2.11.13",
     "typescript": "7.0.2",
-    "vitest": "5.1.1"
+    "vitest": "5.1.1",
+    "yaml": "2.9.1"
   },
   "lint-staged": {
     "*.{ts,tsx,js,mjs}": [
@@ -44,7 +47,7 @@
     ]
   },
   "engines": {
-    "node": ">=22"
+    "node": "^22.15.0 || ^24.0.0 || >=26.0.0"
   },
   "devEngines": {
     "packageManager": {

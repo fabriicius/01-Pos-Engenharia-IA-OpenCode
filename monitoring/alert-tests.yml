@@ -1,0 +1,227 @@
+rule_files:
+  - rules.yml
+evaluation_interval: 1m
+tests:
+  - name: scrape down pending firing and recovery
+    interval: 1m
+    input_series:
+      - series: up{environment="development",instance="local-api",service="fabricius-api",job="fabricius-api"}
+        values: 1 0 0 0 1 1
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: fabricius-api-unreachable
+        exp_alerts: []
+      - eval_time: 3m
+        alertname: fabricius-api-unreachable
+        exp_alerts:
+          - exp_labels:
+              service: fabricius-api
+              severity: critical
+              environment: development
+              instance: local-api
+              job: fabricius-api
+      - eval_time: 5m
+        alertname: fabricius-api-unreachable
+        exp_alerts: []
+  - name: missing expected target is not healthy
+    interval: 1m
+    input_series: []
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: fabricius-api-unreachable
+        exp_alerts:
+          - exp_labels:
+              service: fabricius-api
+              severity: critical
+              environment: development
+              instance: local-api
+              job: fabricius-api
+  - name: database failure is gated by live API scrape
+    interval: 1m
+    input_series:
+      - series: up{environment="development",instance="local-api",service="fabricius-api",job="fabricius-api"}
+        values: 1+0x20
+      - series: api_db_ready{environment="development",instance="local-api",service="fabricius-api",check="postgres"}
+        values: 1 0 0 0 1 1
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: fabricius-db-unavailable
+        exp_alerts: []
+      - eval_time: 3m
+        alertname: fabricius-db-unavailable
+        exp_alerts:
+          - exp_labels:
+              service: fabricius-api
+              severity: critical
+              environment: development
+              instance: local-api
+              check: postgres
+      - eval_time: 5m
+        alertname: fabricius-db-unavailable
+        exp_alerts: []
+  - name: server error traffic guard 1
+    interval: 1m
+    input_series:
+      - series: up{environment="development",instance="local-api",service="fabricius-api",job="fabricius-api"}
+        values: 1+0x20
+      - series: api_http_requests_total{environment="development",instance="local-api",service="fabricius-api",route="/",method="GET",status="500"}
+        values: 0+1x20
+    alert_rule_test:
+      - eval_time: 8m
+        alertname: fabricius-api-errors
+        exp_alerts: []
+  - name: server error traffic guard 100
+    interval: 1m
+    input_series:
+      - series: up{environment="development",instance="local-api",service="fabricius-api",job="fabricius-api"}
+        values: 1+0x20
+      - series: api_http_requests_total{environment="development",instance="local-api",service="fabricius-api",route="/",method="GET",status="500"}
+        values: 0+100x20
+    alert_rule_test:
+      - eval_time: 8m
+        alertname: fabricius-api-errors
+        exp_alerts:
+          - exp_labels:
+              service: fabricius-api
+              severity: critical
+              environment: development
+              instance: local-api
+  - name: latency traffic guard 1
+    interval: 1m
+    input_series:
+      - series: up{environment="development",instance="local-api",service="fabricius-api",job="fabricius-api"}
+        values: 1+0x20
+      - series: api_http_requests_total{environment="development",instance="local-api",service="fabricius-api",route="/",method="GET",status="200"}
+        values: 0+1x20
+      - series: api_http_request_duration_seconds_bucket{environment="development",instance="local-api",service="fabricius-api",route="/",method="GET",le="1"}
+        values: 0+0x20
+      - series: api_http_request_duration_seconds_bucket{environment="development",instance="local-api",service="fabricius-api",route="/",method="GET",le="2.5"}
+        values: 0+1x20
+      - series: api_http_request_duration_seconds_bucket{environment="development",instance="local-api",service="fabricius-api",route="/",method="GET",le="+Inf"}
+        values: 0+1x20
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: fabricius-api-latency
+        exp_alerts: []
+      - eval_time: 8m
+        alertname: fabricius-api-latency
+        exp_alerts: []
+  - name: latency traffic guard 100
+    interval: 1m
+    input_series:
+      - series: up{environment="development",instance="local-api",service="fabricius-api",job="fabricius-api"}
+        values: 1+0x20
+      - series: api_http_requests_total{environment="development",instance="local-api",service="fabricius-api",route="/",method="GET",status="200"}
+        values: 0+100x20
+      - series: api_http_request_duration_seconds_bucket{environment="development",instance="local-api",service="fabricius-api",route="/",method="GET",le="1"}
+        values: 0+0x20
+      - series: api_http_request_duration_seconds_bucket{environment="development",instance="local-api",service="fabricius-api",route="/",method="GET",le="2.5"}
+        values: 0+100x20
+      - series: api_http_request_duration_seconds_bucket{environment="development",instance="local-api",service="fabricius-api",route="/",method="GET",le="+Inf"}
+        values: 0+100x20
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: fabricius-api-latency
+        exp_alerts: []
+      - eval_time: 8m
+        alertname: fabricius-api-latency
+        exp_alerts:
+          - exp_labels:
+              service: fabricius-api
+              severity: warning
+              environment: development
+              instance: local-api
+  - name: idle traffic never fires ratio or latency alerts
+    interval: 1m
+    input_series:
+      - series: up{environment="development",instance="local-api",service="fabricius-api",job="fabricius-api"}
+        values: 1+0x20
+      - series: api_http_requests_total{environment="development",instance="local-api",service="fabricius-api",status="200"}
+        values: 0+0x20
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: fabricius-api-errors
+        exp_alerts: []
+      - eval_time: 10m
+        alertname: fabricius-api-latency
+        exp_alerts: []
+  - name: pool pressure pending firing recovery
+    interval: 1m
+    input_series:
+      - series: up{environment="development",instance="local-api",service="fabricius-api",job="fabricius-api"}
+        values: 1+0x20
+      - series: api_db_pool_connections{environment="development",instance="local-api",service="fabricius-api",state="waiting"}
+        values: 0 1 1 1 1 1 1 0 0
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: fabricius-db-pool
+        exp_alerts: []
+      - eval_time: 6m
+        alertname: fabricius-db-pool
+        exp_alerts:
+          - exp_labels:
+              service: fabricius-api
+              severity: warning
+              environment: development
+              instance: local-api
+              state: waiting
+      - eval_time: 8m
+        alertname: fabricius-db-pool
+        exp_alerts: []
+  - name: provider failure independently of HTTP
+    interval: 1m
+    input_series:
+      - series: up{environment="development",instance="local-api",service="fabricius-api",job="fabricius-api"}
+        values: 1+0x20
+      - series: api_email_dispatch_total{environment="development",instance="local-api",service="fabricius-api",provider="resend",operation="password-reset",outcome="failed"}
+        values: 0 1 1 1 1 1 1 1 1 1
+    alert_rule_test:
+      - eval_time: 0m
+        alertname: fabricius-email-failures
+        exp_alerts: []
+      - eval_time: 2m
+        alertname: fabricius-email-failures
+        exp_alerts:
+          - exp_labels:
+              service: fabricius-api
+              severity: warning
+              environment: development
+              instance: local-api
+      - eval_time: 9m
+        alertname: fabricius-email-failures
+        exp_alerts: []
+  - name: console fallback does not trigger real-provider failure
+    interval: 1m
+    input_series:
+      - series: up{environment="development",instance="local-api",service="fabricius-api",job="fabricius-api"}
+        values: 1+0x20
+      - series: api_email_dispatch_total{environment="development",instance="local-api",service="fabricius-api",provider="console",operation="confirmation",outcome="failed"}
+        values: 0+10x20
+      - series: api_email_provider_info{environment="development",instance="local-api",service="fabricius-api",provider="console"}
+        values: 1+0x20
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: fabricius-email-failures
+        exp_alerts: []
+  - name: event loop pending firing recovery
+    interval: 1m
+    input_series:
+      - series: up{environment="development",instance="local-api",service="fabricius-api",job="fabricius-api"}
+        values: 1+0x20
+      - series: nodejs_eventloop_lag_p99_seconds{environment="development",instance="local-api",service="fabricius-api"}
+        values: 0 .3 .3 .3 .3 .3 .3 0 0
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: fabricius-eventloop
+        exp_alerts: []
+      - eval_time: 6m
+        alertname: fabricius-eventloop
+        exp_alerts:
+          - exp_labels:
+              service: fabricius-api
+              severity: warning
+              environment: development
+              instance: local-api
+      - eval_time: 8m
+        alertname: fabricius-eventloop
+        exp_alerts: []

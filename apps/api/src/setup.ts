@@ -4,9 +4,12 @@ import {
   ValidationPipe,
 } from "@nestjs/common";
 
+import { ObservabilityService } from "./observability/observability.service";
+
 export const CLIENT_ORIGIN = "http://localhost:5173";
 
 export function configureApp(app: INestApplication): void {
+  app.use(app.get(ObservabilityService).middleware);
   app.setGlobalPrefix("api/v1", {
     exclude: [{ path: "", method: RequestMethod.GET }],
   });

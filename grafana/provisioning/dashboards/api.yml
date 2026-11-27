@@ -1,0 +1,12 @@
+apiVersion: 1
+providers:
+  - name: fabricius-api
+    orgId: 1
+    folder: Observability
+    folderUid: fabricius-observability
+    type: file
+    disableDeletion: false
+    allowUiUpdates: false
+    updateIntervalSeconds: 15
+    options:
+      path: /var/lib/grafana/dashboards

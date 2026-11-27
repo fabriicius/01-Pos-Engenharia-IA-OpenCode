@@ -1,0 +1,54 @@
+// Local application metrics; honor the API's environment/instance labels.
+prometheus.scrape "api" {
+  targets = [{
+    "__address__" = "host.docker.internal:9464",
+    "job" = "fabricius-api",
+    "service" = "fabricius-api",
+    "environment" = sys.env("API_ENVIRONMENT"),
+    "instance" = sys.env("API_INSTANCE"),
+  }]
+  honor_labels = true
+  scrape_interval = "15s"
+  scrape_timeout = "5s"
+  forward_to = [prometheus.remote_write.mimir.receiver]
+}
+
+prometheus.remote_write "mimir" {
+  endpoint {
+    url = "http://mimir:9009/api/v1/push"
+    headers = { "X-Scope-OrgID" = "fabricius" }
+  }
+}
+
+otelcol.receiver.otlp "api" {
+  http { endpoint = "0.0.0.0:4318" }
+  output {
+    logs = [otelcol.processor.batch.api.input]
+    traces = [otelcol.processor.batch.api.input]
+  }
+}
+
+otelcol.processor.batch "api" {
+  timeout = "1s"
+  send_batch_size = 128
+  send_batch_max_size = 256
+  output {
+    logs = [otelcol.exporter.loki.api.input]
+    traces = [otelcol.exporter.otlp.tempo.input]
+  }
+}
+
+// Typed operational events only. No stdout or Docker socket collection.
+otelcol.exporter.loki "api" {
+  forward_to = [loki.write.local.receiver]
+}
+loki.write "local" {
+  endpoint { url = "http://loki:3100/loki/api/v1/push" }
+}
+
+otelcol.exporter.otlp "tempo" {
+  client {
+    endpoint = "tempo:4317"
+    tls { insecure = true }
+  }
+}

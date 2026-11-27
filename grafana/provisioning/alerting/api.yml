@@ -1,0 +1,429 @@
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: fabricius-api
+    folder: Observability
+    interval: 1m
+    rules:
+      - uid: fabricius-api-unreachable
+        title: Fabricius — API metrics unreachable
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: PAE45454D0EDB9216
+            relativeTimeRange:
+              from: 600
+              to: 0
+            model:
+              refId: A
+              datasource:
+                type: prometheus
+                uid: PAE45454D0EDB9216
+              expr: (up{job="fabricius-api",service="fabricius-api"} < bool 1) or absent(up{job="fabricius-api",service="fabricius-api",environment="development",instance="local-api"})
+              instant: true
+              range: false
+              intervalMs: 15000
+              maxDataPoints: 43200
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 0
+              to: 0
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 0
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+                    params: []
+                  type: query
+                  query:
+                    params:
+                      - C
+        dashboardUid: fabricius-api-observability
+        panelId: 2
+        noDataState: NoData
+        execErrState: Error
+        for: 2m
+        annotations:
+          __dashboardUid__: fabricius-api-observability
+          __panelId__: "2"
+          summary: API metrics cannot be scraped.
+          description:
+            Check API process and metrics :9464, then Alloy target and remote-write
+            errors. The absent-target check expects development/local-api; adjust it for
+            other deployments.
+        labels:
+          service: fabricius-api
+          severity: critical
+        isPaused: false
+      - uid: fabricius-db-unavailable
+        title: Fabricius — Database unavailable
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: PAE45454D0EDB9216
+            relativeTimeRange:
+              from: 600
+              to: 0
+            model:
+              refId: A
+              datasource:
+                type: prometheus
+                uid: PAE45454D0EDB9216
+              expr:
+                (api_db_ready{service="fabricius-api"} == bool 0) and on(environment,instance)
+                (up{job="fabricius-api",service="fabricius-api"} == 1)
+              instant: true
+              range: false
+              intervalMs: 15000
+              maxDataPoints: 43200
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 0
+              to: 0
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 0
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+                    params: []
+                  type: query
+                  query:
+                    params:
+                      - C
+        dashboardUid: fabricius-api-observability
+        panelId: 3
+        noDataState: NoData
+        execErrState: Error
+        for: 2m
+        annotations:
+          __dashboardUid__: fabricius-api-observability
+          __panelId__: "3"
+          summary: Last bounded database readiness probe failed.
+          description:
+            Check API database connectivity and pool; a successful GET / does
+            not prove PostgreSQL readiness.
+        labels:
+          service: fabricius-api
+          severity: critical
+        isPaused: false
+      - uid: fabricius-api-errors
+        title: Fabricius — Elevated server errors
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: PAE45454D0EDB9216
+            relativeTimeRange:
+              from: 600
+              to: 0
+            model:
+              refId: A
+              datasource:
+                type: prometheus
+                uid: PAE45454D0EDB9216
+              expr:
+                ((sum by (environment,instance) (increase(api_http_requests_total{service="fabricius-api",status=~"5.."}[5m]))
+                or (0*sum by (environment,instance) (increase(api_http_requests_total{service="fabricius-api"}[5m]))))
+                / sum by (environment,instance) (increase(api_http_requests_total{service="fabricius-api"}[5m]))
+                > bool .05) * (sum by (environment,instance) (increase(api_http_requests_total{service="fabricius-api"}[5m]))
+                >= bool 20)
+              instant: true
+              range: false
+              intervalMs: 15000
+              maxDataPoints: 43200
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 0
+              to: 0
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 0
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+                    params: []
+                  type: query
+                  query:
+                    params:
+                      - C
+        dashboardUid: fabricius-api-observability
+        panelId: 7
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          __dashboardUid__: fabricius-api-observability
+          __panelId__: "7"
+          summary: HTTP 5xx fraction above 5% with at least 20 requests / 5m.
+          description:
+            Inspect endpoint status chart, warning/error logs and their Tempo
+            traces. 4xx are excluded from this condition.
+        labels:
+          service: fabricius-api
+          severity: critical
+        isPaused: false
+      - uid: fabricius-api-latency
+        title: Fabricius — Slow API
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: PAE45454D0EDB9216
+            relativeTimeRange:
+              from: 600
+              to: 0
+            model:
+              refId: A
+              datasource:
+                type: prometheus
+                uid: PAE45454D0EDB9216
+              expr:
+                (histogram_quantile(.95,sum by (environment,instance,le) (rate(api_http_request_duration_seconds_bucket{service="fabricius-api"}[5m])))
+                > bool 1) * (sum by (environment,instance) (increase(api_http_requests_total{service="fabricius-api"}[5m]))
+                >= bool 20)
+              instant: true
+              range: false
+              intervalMs: 15000
+              maxDataPoints: 43200
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 0
+              to: 0
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 0
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+                    params: []
+                  type: query
+                  query:
+                    params:
+                      - C
+        dashboardUid: fabricius-api-observability
+        panelId: 8
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          __dashboardUid__: fabricius-api-observability
+          __panelId__: "8"
+          summary: HTTP p95 above 1s with at least 20 requests / 5m.
+          description:
+            Inspect per-route p95, database query traces, transaction duration
+            and email duration. Idle traffic does not trigger this rule.
+        labels:
+          service: fabricius-api
+          severity: warning
+        isPaused: false
+      - uid: fabricius-db-pool
+        title: Fabricius — Database pool pressure
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: PAE45454D0EDB9216
+            relativeTimeRange:
+              from: 600
+              to: 0
+            model:
+              refId: A
+              datasource:
+                type: prometheus
+                uid: PAE45454D0EDB9216
+              expr:
+                api_db_pool_connections{service="fabricius-api",state="waiting"} > bool
+                0
+              instant: true
+              range: false
+              intervalMs: 15000
+              maxDataPoints: 43200
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 0
+              to: 0
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 0
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+                    params: []
+                  type: query
+                  query:
+                    params:
+                      - C
+        dashboardUid: fabricius-api-observability
+        panelId: 26
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          __dashboardUid__: fabricius-api-observability
+          __panelId__: "26"
+          summary: Application pool has waiting connections.
+          description:
+            Inspect pool busy/max and transaction spans. These are API pool
+            connections, not PostgreSQL-wide connection totals.
+        labels:
+          service: fabricius-api
+          severity: warning
+        isPaused: false
+      - uid: fabricius-email-failures
+        title: Fabricius — Email dispatch failures
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: PAE45454D0EDB9216
+            relativeTimeRange:
+              from: 600
+              to: 0
+            model:
+              refId: A
+              datasource:
+                type: prometheus
+                uid: PAE45454D0EDB9216
+              expr:
+                (sum by (environment,instance) (increase(api_email_dispatch_total{service="fabricius-api",provider!="console",outcome="failed"}[5m]))
+                or (0 * sum by (environment,instance) (api_email_provider_info{service="fabricius-api"})))
+                >= bool 1
+              instant: true
+              range: false
+              intervalMs: 15000
+              maxDataPoints: 43200
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 0
+              to: 0
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 0
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+                    params: []
+                  type: query
+                  query:
+                    params:
+                      - C
+        dashboardUid: fabricius-api-observability
+        panelId: 33
+        noDataState: NoData
+        execErrState: Error
+        for: 1m
+        annotations:
+          __dashboardUid__: fabricius-api-observability
+          __panelId__: "33"
+          summary: A real-provider email adapter failed in the last 5m.
+          description:
+            Inspect sanitized email.dispatch failure events. Password recovery
+            may still return generic 202. Acceptance is not inbox delivery.
+        labels:
+          service: fabricius-api
+          severity: warning
+        isPaused: false
+      - uid: fabricius-eventloop
+        title: Fabricius — Event-loop pressure
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: PAE45454D0EDB9216
+            relativeTimeRange:
+              from: 600
+              to: 0
+            model:
+              refId: A
+              datasource:
+                type: prometheus
+                uid: PAE45454D0EDB9216
+              expr: nodejs_eventloop_lag_p99_seconds{service="fabricius-api"} > bool .2
+              instant: true
+              range: false
+              intervalMs: 15000
+              maxDataPoints: 43200
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 0
+              to: 0
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 0
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+                    params: []
+                  type: query
+                  query:
+                    params:
+                      - C
+        dashboardUid: fabricius-api-observability
+        panelId: 39
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          __dashboardUid__: fabricius-api-observability
+          __panelId__: "39"
+          summary: Node event-loop p99 delay is above 200ms.
+          description:
+            Inspect CPU, process memory and slow traces. Route/method dashboard
+            filters do not scope runtime metrics.
+        labels:
+          service: fabricius-api
+          severity: warning
+        isPaused: false

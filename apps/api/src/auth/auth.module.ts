@@ -1,4 +1,8 @@
 import { Module } from "@nestjs/common";
+import { ObservabilityService } from "../observability/observability.service";
+import { ObservedEmailService } from "../observability/observed-email";
+import { ConsoleEmailAdapter } from "./infrastructure/email/console.adapter";
+import { selectEmailProvider } from "./infrastructure/email/email-service.factory";
 import { ConfigService } from "@nestjs/config";
 import { ConfirmAccountUseCase } from "./application/confirm-account.use-case";
 import { ForgotPasswordUseCase } from "./application/forgot-password.use-case";
@@ -43,8 +47,17 @@ import { SignInController } from "./interface/sign-in.controller";
     { provide: AccessTokenService, useClass: JwtAccessTokenService },
     {
       provide: EmailService,
-      useFactory: createEmailService,
-      inject: [ConfigService],
+      useFactory: (config: ConfigService, telemetry: ObservabilityService) => {
+        const adapter = createEmailService(config);
+        return new ObservedEmailService(
+          adapter,
+          adapter instanceof ConsoleEmailAdapter
+            ? "console"
+            : selectEmailProvider(config),
+          telemetry,
+        );
+      },
+      inject: [ConfigService, ObservabilityService],
     },
   ],
 })

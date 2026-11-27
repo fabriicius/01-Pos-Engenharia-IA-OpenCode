@@ -62,7 +62,7 @@ The four layers are implemented for the auth slice under `apps/api/src/auth/` (`
 - **Tests**: add/update unit, integration, and E2E tests appropriate to the change. If a test layer is not yet present, document the gap and add the most relevant coverage.
 - **Accessibility**: semantic UI, keyboard operability, labels, focus management, color not sole signal.
 - **Responsiveness**: layouts must work on desktop, tablet, and mobile.
-- **Observability** [target]: instrument logs/traces/metrics as services are introduced; prefer Grafana LGTM stack conventions when infra exists. The stack itself is already provisioned locally, but application instrumentation is not part of the foundation.
+- **Observability** [current]: spec 007 instruments API requests, database queries/transactions/readiness/pool and email adapters. Use the shared observability module and allowlisted fields; never forward raw console output, bodies, URLs, SQL, bind values or arbitrary errors. See `OBSERVABILITY.md`.
 - **Security basics**: validate inputs, avoid leaking secrets, handle errors safely, least privilege for integrations. `.env.example` defaults are local-only and must never be reused in production.
 
 ## Change discipline

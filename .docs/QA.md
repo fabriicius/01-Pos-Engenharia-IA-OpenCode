@@ -160,3 +160,17 @@ When finishing a task, report:
 - Commands run and their result (pass/fail/not available).
 - Any checks skipped and why.
 - Manual QA steps performed or required.
+
+## API observability checks (spec 007)
+
+```sh
+npm run observability:test-alerts  # pinned promtool in Docker; isolated fixtures
+npm run observability:verify       # all panel queries, provisioning and rule evaluation
+npx eslint monitoring/*.mjs --max-warnings 0
+docker compose config --quiet
+docker run --rm -v "$PWD/monitoring/alloy.alloy:/etc/alloy/config.alloy:ro" grafana/alloy:v1.11.3 validate /etc/alloy/config.alloy
+```
+
+Automated coverage includes HTTP success/validation/guard/unexpected failure/unmatched-method attribution, exactly-once abort accounting, actual OTLP payload privacy, correlated dependency spans, preserved pg/email outcomes, console fallback and non-fatal metrics port conflicts. Alert fixtures exercise all seven actual rules with pending/firing/recovery, missing target, low/idle traffic and console-provider exclusion, without injecting series into the running stack.
+
+Manual/live QA: open [API Observability](http://localhost:3002/d/fabricius-api-observability), inspect desktop/narrow layout, filters and empty states, expand a log and follow View trace, confirm read-only query spans, and restart Grafana/Alloy to verify stable resources without duplicates. See [OBSERVABILITY.md](OBSERVABILITY.md). Existing six opt-in DB mutation probes are skipped unless `RUN_DB_PROBE=1` is supplied.
